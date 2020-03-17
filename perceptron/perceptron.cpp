@@ -84,7 +84,7 @@ namespace ML {
         return;
     }
 
-    double Perceptron::kernel_rbf(std::vector<double> x1, std::vector<double> x2)
+    double Perceptron::kernel_rbf(std::vector<double>& x1, std::vector<double>& x2)
     {
         /* rbf */
         double sigma = 1;
@@ -94,12 +94,12 @@ namespace ML {
         return exp(xL2);
     }
 
-    double Perceptron::kernel_polynomial(std::vector<double> x1, std::vector<double> x2)
+    double Perceptron::kernel_polynomial(std::vector<double>& x1, std::vector<double>& x2)
     {
         return pow(dotProduct(x1, x2) + 1, 100);	
     }
 
-    double Perceptron::kernel(std::vector<double> x1, std::vector<double> x2, int kernelType)
+    double Perceptron::kernel(std::vector<double>& x1, std::vector<double>& x2, int kernelType)
     {
         double innerProduct = 0;
         switch (kernelType) {
@@ -119,7 +119,7 @@ namespace ML {
         return innerProduct;
     }
 
-    double Perceptron::dotProduct(std::vector<double> x1, std::vector<double> x2)
+    double Perceptron::dotProduct(std::vector<double>& x1, std::vector<double>& x2)
     {
         double sum = 0.0;
         for (int i = 0; i < x1.size(); i++) {

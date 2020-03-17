@@ -222,7 +222,7 @@ namespace ML {
         return;
     }
 
-    double SVM::kernel_rbf(std::vector<double> x1, std::vector<double> x2)
+    double SVM::kernel_rbf(std::vector<double>& x1, std::vector<double>& x2)
     {
         double sigma = 1;
         double xL2 = 0.0;
@@ -231,7 +231,7 @@ namespace ML {
         return exp(xL2);
     }
 
-    double SVM::kernel_laplace(std::vector<double> x1, std::vector<double> x2)
+    double SVM::kernel_laplace(std::vector<double>& x1, std::vector<double>& x2)
     {
         double sigma = 1;
         double xL2 = 0.0;
@@ -240,21 +240,21 @@ namespace ML {
         return exp(xL2);
     }
 
-    double SVM::kernel_sigmoid(std::vector<double> x1, std::vector<double> x2)
+    double SVM::kernel_sigmoid(std::vector<double>& x1, std::vector<double>& x2)
     {
         double beta1 = 1;
         double theta = -1;
         return tanh(beta1 * dotProduct(x1, x2) + theta);
     }
 
-    double SVM::kernel_polynomial(std::vector<double> x1, std::vector<double> x2)
+    double SVM::kernel_polynomial(std::vector<double>& x1, std::vector<double>& x2)
     {
         double d = 1.0;
         double p = 100;
         return pow(dotProduct(x1, x2) + d, p);	
     }
 
-    double SVM::kernel(std::vector<double> x1, std::vector<double> x2, int kernelType)
+    double SVM::kernel(std::vector<double>& x1, std::vector<double>& x2, int kernelType)
     {
         double innerProduct = 0;
         switch (kernelType) {
@@ -280,7 +280,7 @@ namespace ML {
         return innerProduct;
     }
 
-    double SVM::dotProduct(std::vector<double> x1, std::vector<double> x2)
+    double SVM::dotProduct(std::vector<double>& x1, std::vector<double>& x2)
     {
         double sum = 0.0;
         for (int i = 0; i < x1.size(); i++) {

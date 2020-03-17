@@ -42,13 +42,13 @@ namespace ML {
         private:
             bool KKT(double yi, double Ei, double alpha_i);
             double g(std::vector<double>& xi);
-            double kernel_rbf(std::vector<double> x1, std::vector<double> x2);
-            double kernel_laplace(std::vector<double> x1, std::vector<double> x2);
-            double kernel_sigmoid(std::vector<double> x1, std::vector<double> x2);
-            double kernel_polynomial(std::vector<double> x1, std::vector<double> x2);
-            double kernel_linear(std::vector<double> x1, std::vector<double> x2);
-            double kernel(std::vector<double> x1, std::vector<double> x2, int kernelType);
-            double dotProduct(std::vector<double> x1, std::vector<double> x2);
+            double kernel_rbf(std::vector<double>& x1, std::vector<double>& x2);
+            double kernel_laplace(std::vector<double>& x1, std::vector<double>& x2);
+            double kernel_sigmoid(std::vector<double>& x1, std::vector<double>& x2);
+            double kernel_polynomial(std::vector<double>& x1, std::vector<double>& x2);
+            double kernel_linear(std::vector<double>& x1, std::vector<double>& x2);
+            double kernel(std::vector<double>& x1, std::vector<double>& x2, int kernelType);
+            double dotProduct(std::vector<double>& x1, std::vector<double>& x2);
             int random(int i);
             double max(double x1, double x2);
             double min(double x1, double x2);

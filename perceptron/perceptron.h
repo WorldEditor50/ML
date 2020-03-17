@@ -20,11 +20,10 @@ namespace ML {
 			void setKernel(int kernelType);
 			void show();
 		private:
-			double kernel_rbf(std::vector<double> x1, std::vector<double> x2);
-			double kernel_polynomial(std::vector<double> x1, std::vector<double> x2);
-			double kernel_linear(std::vector<double> x1, std::vector<double> x2);
-			double kernel(std::vector<double> x1, std::vector<double> x2, int kernelType);
-			double dotProduct(std::vector<double> x1, std::vector<double> x2);
+			double kernel_rbf(std::vector<double>& x1, std::vector<double>& x2);
+			double kernel_polynomial(std::vector<double>& x1, std::vector<double>& x2);
+			double kernel(std::vector<double>& x1, std::vector<double>& x2, int kernelType);
+			double dotProduct(std::vector<double>& x1, std::vector<double>& x2);
 			std::vector<std::vector<double> > x;
 			std::vector<double> y;
 			std::vector<double> alpha;
