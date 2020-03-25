@@ -10,6 +10,7 @@ namespace ML {
         this->maxMemorySize = maxMemorySize;
         this->batchSize = batchSize;
         this->states.resize(batchSize);
+        this->rewards.resize(batchSize);
         this->q_eval.resize(batchSize);
         this->q_next.resize(batchSize);
         this->q_target.resize(batchSize);
@@ -27,7 +28,7 @@ namespace ML {
         return;
     }
 
-    void DQNet::perceive(std::vector<double>& state, std::vector<double>& action, std::vector<double>& nextState, double reward);
+    void DQNet::perceive(std::vector<double>& state, std::vector<double>& action, std::vector<double>& nextState, double reward)
     {
         Transition transition;
         transition.state = state;
@@ -57,7 +58,7 @@ namespace ML {
         if (p <= epsilon) {
             index = action(state);
         } else {
-            index = rand() % action.size();
+            index = rand() % state.size();
         }
         return index;
     }

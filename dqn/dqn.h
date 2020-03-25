@@ -10,21 +10,19 @@
 #include <cstdlib>
 #include "../bpnn/bpnn.h"
 namespace ML {
-
     struct Transition {
-        std::vector<double> states;
-        std::vector<double> actions;
-        std::vector<double> nextStates;
+        std::vector<double> state;
+        std::vector<double> action;
+        std::vector<double> nextState;
         double reward;
     };
     class DQNet {
         public:
             DQNet(){}
             ~DQNet(){}
-            void createNet(int stateDim, int actionDim);
+            void createNet(int stateDim, int actionDim, int maxMemorySize, int replaceTargetIter, int batchSize);
             void perceive(std::vector<double>& state, std::vector<double>& action, std::vector<double>& nextState, double reward);
             void forget();
-            void sort(int first, int last);
             int chooseAction(std::vector<double>& state);
             int action(std::vector<double>& state);
             void experienceReplay();
@@ -44,6 +42,7 @@ namespace ML {
             BpNet targetNet;
             std::deque<Transition> memories;
             std::vector<std::vector<double> > states;
+            std::vector<double> rewards;
             std::vector<std::vector<double> > q_eval;
             std::vector<std::vector<double> > q_next;
             std::vector<std::vector<double> > q_target;
