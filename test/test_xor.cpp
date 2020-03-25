@@ -22,8 +22,9 @@ void test_bpnn(vector<vector<double> >& x)
     y[2][0] = 1;
     y[3][0] = 0;
     bp.train(x, y, 10000);
+    vector<double>& yi = bp.getOutput();
     for (int i = 0; i < 4; i++) {
-        vector<double>& yi = bp.feedForward(x[i]);
+        bp.feedForward(x[i]);
         cout<<x[i][0]<<" "<<x[i][1]<<" "<<yi[0]<<endl;
     }
     return;

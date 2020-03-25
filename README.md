@@ -6,3 +6,4 @@
 - logistics
 - perceptron
 - svm
+- dqn

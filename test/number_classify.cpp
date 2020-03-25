@@ -38,8 +38,9 @@ void number_classify01()
     bp.train(20000);
     bp.saveParameter("./data/number_classify_weights.txt");
     vector<vector<double> >& x = bp.features;
+    vector<double>& y = bp.getOutput();
     for (int j = 0; j < 10; j++) {
-        vector<double>& y = bp.feedForward(x[j]);
+        bp.feedForward(x[j]);
         decode(y);
     }
     return;
@@ -53,7 +54,8 @@ void number_classify02()
     bp.loadParameter("./data/number_classify_weights.txt");
     vector<vector<double> >& x = bp.features;
     show(x[9]);
-    vector<double>& y = bp.feedForward(x[9]);
+    vector<double>& y = bp.getOutput();
+    bp.feedForward(x[9]);
     decode(y);
     show(x[4]);
     bp.feedForward(x[4]);

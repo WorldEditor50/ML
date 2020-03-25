@@ -30,17 +30,17 @@ namespace ML {
         return DSigmoid(y);
     }
 
-    void Layer::createLayer(int neuronNum, int inputNum)
+    void Layer::createLayer(int inputDim, int layerDim)
     {
-        if (neuronNum < 1 || inputNum < 1) {
+        if (layerDim < 1 || inputDim < 1) {
             return;
         }
-        outputs.resize(neuronNum);
-        errors.resize(neuronNum);
-        bias.resize(neuronNum);
-        weights.resize(neuronNum);
+        outputs.resize(layerDim);
+        errors.resize(layerDim);
+        bias.resize(layerDim);
+        weights.resize(layerDim);
         for (int i = 0; i < weights.size(); i++) {
-            weights[i].resize(inputNum);
+            weights[i].resize(inputDim);
             /* init weights */
             for (int j = 0; j < weights[0].size(); j++) {
                 weights[i][j] = double(rand() % 1000 - rand() % 1000) / 1000;
@@ -102,29 +102,45 @@ namespace ML {
         return;
     }
 
-    void BpNet::createNet(int outputNeuronNum, int inputNum, int hiddenNeuronNum, int hiddenLayerNum, double learningRate)
+    void BpNet::createNet(int inputDim, int hiddenDim, int outputDim, int hiddenLayerNum, double learningRate)
     {
         Layer layer1; 
-        layer1.createLayer(hiddenNeuronNum, inputNum);
+        layer1.createLayer(inputDim, hiddenDim);
         layers.push_back(layer1);
         for (int i = 1; i < hiddenLayerNum; i++) {
             Layer layer;
-            layer.createLayer(hiddenNeuronNum, hiddenNeuronNum);
+            layer.createLayer(hiddenDim, hiddenDim);
             layers.push_back(layer);
         }
         Layer outputLayer; 
-        outputLayer.createLayer(outputNeuronNum, hiddenNeuronNum);
+        outputLayer.createLayer(hiddenDim, outputDim);
         layers.push_back(outputLayer);
         this->learningRate = learningRate;
         this->outputIndex = layers.size() - 1;
         return;
     }
 
+    void BpNet::copyTo(BpNet& dstNet)
+    {
+        if (layers.size() != dstNet.layers.size()) {
+            return;
+        }
+        for (int i = 0; i < layers.size(); i++) {
+            for (int j = 0; j < layers[i].weights.size(); j++) {
+                for (int k = 0; k < layers[i].weights[j].size(); k++) {
+                    layers[i].weights[j][k] = dstNet.layers[i].weights[j][k];
+                }
+                layers[i].bias[j] = dstNet.layers[i].bias[j];
+            }
+        }
+        return;
+    }
+
     void BpNet::createNetWithConfig(BpNetConfig& config)
     {
-        createNet(config.outputNeuronNum,
-                config.inputNeuronNum,
-                config.hiddenNeuronNum,
+        createNet(config.inputDim,
+                config.hiddenDim,
+                config.outputDim,
                 config.hiddenLayerNum,
                 config.learningRate);
         return;
@@ -149,21 +165,26 @@ namespace ML {
         return;
     }
 
-    std::vector<double>& BpNet::feedForward(std::vector<double>& xi)
+    void BpNet::feedForward(std::vector<double>& xi)
     {
         layers[0].calculateOutputs(xi);
         for (int i = 1; i < layers.size(); i++) {
             layers[i].calculateOutputs(layers[i - 1].outputs);
         }
+        return;
+    }
+
+    std::vector<double>& BpNet::getOutput()
+    {
         std::vector<double>& outputs = layers[outputIndex].outputs;
         return outputs;
     }
 
-    void BpNet::backPropagate(std::vector<double>& yi)
+    void BpNet::backPropagate(std::vector<double>& yo, std::vector<double>& yt)
     {
         /* calculate final error */
-        for (int i = 0; i < yi.size(); i++) {
-            layers[outputIndex].errors[i] = layers[outputIndex].outputs[i] - yi[i]; 
+        for (int i = 0; i < yo.size(); i++) {
+            layers[outputIndex].errors[i] = yo[i] - yt[i]; 
         }
         /* error backpropagate */
         for (int i = outputIndex - 1; i >= 0; i--) {
@@ -187,6 +208,18 @@ namespace ML {
         return;
     }
 
+    void BpNet::train(std::vector<double> &x, std::vector<double> &yo, std::vector<double> &yt)
+    {
+        if (yo.size() != yt.size()) {
+            return;
+        }
+        /* calculate final error */
+        backPropagate(yo, yt);
+        updateWeight(x);
+        return;
+    }
+
+
     void BpNet::train(std::vector<std::vector<double> >& x, std::vector<std::vector<double> >& y, int iterateNum)
     {
         if (x.empty() || y.empty()) {
@@ -208,7 +241,7 @@ namespace ML {
         for (int i = 0; i < iterateNum; i++) {
             int k = rand() % y.size();
             feedForward(x[k]);
-            backPropagate(y[k]);
+            backPropagate(layers[outputIndex].outputs, y[k]);
             updateWeight(x[k]);
         }
         return;

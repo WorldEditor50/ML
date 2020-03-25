@@ -9,9 +9,9 @@
 #include <cstdlib>
 namespace ML {
     struct BpNetConfig {
-        int outputNeuronNum;
-        int inputNeuronNum;
-        int hiddenNeuronNum;
+        int inputDim;
+        int hiddenDim;
+        int outputDim;
         int hiddenLayerNum;
         double learningRate;
     };
@@ -20,13 +20,12 @@ namespace ML {
         public:
             Layer(){}
             ~Layer(){}
-            void createLayer(int neuronNum, int inputNum);
+            void createLayer(int inputDim, int layerDim);
             double activate(double x);
             double derivativeActivate(double y);
             void calculateOutputs(std::vector<double>& x);
             void calculateErrors(std::vector<double>& nextErrors, std::vector<std::vector<double> >& nextWeights);
             void adjustWeight(std::vector<double>& x, double learningRate);
-        public:
             double sigmoid(double x);
             double DSigmoid(double y);
             double RELU(double x);
@@ -41,25 +40,27 @@ namespace ML {
         public:
             BpNet(){}
             ~BpNet(){}
-            void createNet(int outputNeuronNum, int inputNum, int hiddenNeuronNum, int hiddenLayerNum, double learningRate);
+            void createNet(int inputDim, int hiddenDim, int outputDim, int hiddenLayerNum, double learningRate);
+            void copyTo(BpNet& dstNet);
             void createNetWithConfig(BpNetConfig& config);
+            void feedForward(std::vector<double>& xi);
+            void backPropagate(std::vector<double>& yo, std::vector<double>& yt);
+            void updateWeight(std::vector<double>& xi);
+            std::vector<double>& getOutput();
+            void train(int iterateNum);
+            void train(std::vector<double> &x, std::vector<double> &yo, std::vector<double> &yt);
+            void train(std::vector<std::vector<double> >& x, std::vector<std::vector<double> >& y, int iterateNum);
+            void show();
             void loadDataSet(const std::string& fileName, int rowNum, int colNum, int featureNum);
             void loadFeature(const std::string& fileName, int rowNum, int colNum);
             void loadTarget(const std::string& fileName, int rowNum, int colNum);
             void loadParameter(const std::string& fileName);
             void saveParameter(const std::string& fileName);
-            void train(int iterateNum);
-            void train(std::vector<std::vector<double> >& x, std::vector<std::vector<double> >& y, int iterateNum);
-            std::vector<double>& feedForward(std::vector<double>& xi);
-            void show();
             std::vector<std::vector<double> > features;
             std::vector<std::vector<double> > targets;
-        private:
             double learningRate;
             int outputIndex;
             std::vector<Layer> layers;
-            void backPropagate(std::vector<double>& yi);
-            void updateWeight(std::vector<double>& xi);
     };
 }
 #endif // BPNN_H
