@@ -20,14 +20,24 @@ namespace ML {
         public:
             DQNet(){}
             ~DQNet(){}
-            void createNet(int stateDim, int actionDim, int maxMemorySize, int replaceTargetIter, int batchSize);
-            void perceive(std::vector<double>& state, std::vector<double>& action, std::vector<double>& nextState, double reward);
+            void createNet(int stateDim,
+                    int actionDim,
+                    int hiddenDim,
+                    int hiddenLayerNum,
+                    int maxMemorySize,
+                    int replaceTargetIter,
+                    int batchSize,
+                    double learningRate);
+            void perceive(std::vector<double>& state,
+                    std::vector<double>& action,
+                    std::vector<double>& nextState,
+                    double reward);
             void forget();
-            int chooseAction(std::vector<double>& state);
+            int eGreedyAction(std::vector<double>& state);
             int action(std::vector<double>& state);
             void experienceReplay();
             int maxQ(std::vector<double>& qnext);
-            void learn();
+            void learn(int iterateNum);
             void save(const std::string& fileName);
             void load(const std::string& fileName);
             double gamma;

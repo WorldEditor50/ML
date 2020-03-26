@@ -1,12 +1,19 @@
 #include "dqn.h"
 namespace ML {
-    void DQNet::createNet(int stateDim, int actionDim, int maxMemorySize, int replaceTargetIter, int batchSize)
+    void DQNet::createNet(int stateDim,
+            int actionDim,
+            int hiddenDim,
+            int hiddenLayerNum,
+            int maxMemorySize,
+            int replaceTargetIter,
+            int batchSize,
+            double learningRate)
     {
 
-        this->learningRate = 0.000001;
         this->gamma = 0.9;
         this->epsilonMax = 0.9;
         this->epsilon = 0;
+        this->learningRate = learningRate;
         this->maxMemorySize = maxMemorySize;
         this->batchSize = batchSize;
         this->states.resize(batchSize);
@@ -20,15 +27,16 @@ namespace ML {
             q_next[i].resize(actionDim, 0);
             q_target[i].resize(actionDim, 0);
         }
-        int hiddenDim = 32;
-        int hiddenLayerNum = 2;
         this->evalNet.createNet(stateDim, hiddenDim, actionDim, hiddenLayerNum, learningRate);
         this->targetNet.createNet(stateDim, hiddenDim, actionDim, hiddenLayerNum, learningRate);
         this->evalNet.copyTo(targetNet);
         return;
     }
 
-    void DQNet::perceive(std::vector<double>& state, std::vector<double>& action, std::vector<double>& nextState, double reward)
+    void DQNet::perceive(std::vector<double>& state,
+            std::vector<double>& action,
+            std::vector<double>& nextState,
+            double reward)
     {
         Transition transition;
         transition.state = state;
@@ -41,9 +49,6 @@ namespace ML {
 
     void DQNet::forget()
     {
-        if (memories.size() < 1024) {
-            return;
-        }
         int k = memories.size() - 1;
         for (int i = 0; i < k / 3; i++) {
             memories.pop_front();
@@ -51,7 +56,7 @@ namespace ML {
         return;
     }
 
-    int DQNet::chooseAction(std::vector<double> &state)
+    int DQNet::eGreedyAction(std::vector<double> &state)
     {
         double p = double(rand() % 1000) / 1000;
         int index = 0;
@@ -79,8 +84,25 @@ namespace ML {
         return index;
     }
 
+    int DQNet::maxQ(std::vector<double>& qnext)
+    {
+        double maxValue = qnext[0];
+        int index = 0;
+        for (int i = 0; i < qnext.size(); i++) {
+            if (maxValue < qnext[i]) {
+                maxValue = qnext[i];
+                index = i;
+            }
+        }
+        return index;
+    }
+
     void DQNet::experienceReplay()
     {
+        if (memories.size() < batchSize) {
+            return;
+        }
+        /* sampling */
         std::vector<double>& targetNetOutput = targetNet.getOutput();
         for (int i = 0; i < batchSize; i++) {
             int index = rand() % memories.size();
@@ -95,36 +117,6 @@ namespace ML {
             targetNet.feedForward(memories[index].nextState);
             q_next[i].assign(targetNetOutput.begin(), targetNetOutput.end());
         }
-        return;
-    }
-
-    int DQNet::maxQ(std::vector<double>& qnext)
-    {
-        double maxValue = qnext[0];
-        int index = 0;
-        for (int i = 0; i < qnext.size(); i++) {
-            if (maxValue < qnext[i]) {
-                maxValue = qnext[i];
-                index = i;
-            }
-        }
-        return index;
-    }
-
-    void DQNet::learn()
-    {
-        if (memories.size() < batchSize) {
-            return;
-        }
-        if (learningSteps % replaceTargetIter == 0) {
-            std::cout<<"update target net"<<std::endl;
-            /* update tagetNet */
-            evalNet.copyTo(targetNet);
-            /* reduce memory */
-            forget();
-        }
-        /* experience replay */
-        experienceReplay();
         /* estimate q-target */
         for (int i = 0; i < q_target.size(); i++) {
             int index = maxQ(q_next[i]);
@@ -134,11 +126,29 @@ namespace ML {
         for (int i = 0; i < batchSize; i++) {
             evalNet.train(states[i], q_eval[i], q_target[i]);
         }
-        /* update step */
-        if (epsilon < epsilonMax) {
-            epsilon += 0.0001;
+        return;
+    }
+
+    void DQNet::learn(int iterateNum)
+    {
+        for (int i = 0; i < iterateNum; i++) {
+            if (learningSteps % replaceTargetIter == 0) {
+                std::cout<<"update target net"<<std::endl;
+                /* update tagetNet */
+                evalNet.copyTo(targetNet);
+            }
+            /* experience replay */
+            experienceReplay();
+            /* update step */
+            if (epsilon < epsilonMax) {
+                epsilon += 0.0001;
+            }
+            learningSteps++;
         }
-        learningSteps++;
+        /* reduce memory */
+        if (memories.size() > maxMemorySize) {
+            forget();
+        }
         return;
     }
 
