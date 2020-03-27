@@ -20,14 +20,8 @@ namespace ML {
         public:
             DQNet(){}
             ~DQNet(){}
-            void createNet(int stateDim,
-                    int actionDim,
-                    int hiddenDim,
-                    int hiddenLayerNum,
-                    int maxMemorySize,
-                    int replaceTargetIter,
-                    int batchSize,
-                    double learningRate);
+            void createNet(int stateDim, int actionDim, int hiddenDim, int hiddenLayerNum,
+                    int maxMemorySize, int replaceTargetIter, int batchSize, double learningRate);
             void perceive(std::vector<double>& state,
                     std::vector<double>& action,
                     std::vector<double>& nextState,

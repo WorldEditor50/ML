@@ -1,15 +1,8 @@
 #include "dqn.h"
 namespace ML {
-    void DQNet::createNet(int stateDim,
-            int actionDim,
-            int hiddenDim,
-            int hiddenLayerNum,
-            int maxMemorySize,
-            int replaceTargetIter,
-            int batchSize,
-            double learningRate)
+    void DQNet::createNet(int stateDim, int actionDim, int hiddenDim, int hiddenLayerNum,
+            int maxMemorySize, int replaceTargetIter, int batchSize, double learningRate)
     {
-
         this->gamma = 0.9;
         this->epsilonMax = 0.9;
         this->epsilon = 0;
@@ -106,19 +99,16 @@ namespace ML {
         std::vector<double>& targetNetOutput = targetNet.getOutput();
         for (int i = 0; i < batchSize; i++) {
             int index = rand() % memories.size();
-            /* copy statw */
             states[i] = memories[index].state;
-            /* copy action */
             q_eval[i] = memories[index].action;
-            q_target[i] = memories[index].action;
-            /* copy reward */
             rewards[i] = memories[index].reward;
-            /* calculate q-target */
+            /* calculate q-next */
             targetNet.feedForward(memories[index].nextState);
             q_next[i].assign(targetNetOutput.begin(), targetNetOutput.end());
         }
         /* estimate q-target */
         for (int i = 0; i < q_target.size(); i++) {
+            q_target[i].assign(q_target,size(), 0);
             int index = maxQ(q_next[i]);
             q_target[i][index] = rewards[i] + gamma * q_next[i][index];
         }
