@@ -15,6 +15,7 @@ namespace ML {
         std::vector<double> action;
         std::vector<double> nextState;
         double reward;
+        bool isEnd;
     };
     class DQNet {
         public:
@@ -25,7 +26,8 @@ namespace ML {
             void perceive(std::vector<double>& state,
                     std::vector<double>& action,
                     std::vector<double>& nextState,
-                    double reward);
+                    double reward,
+                    bool isEnd);
             void forget();
             int eGreedyAction(std::vector<double>& state);
             int action(std::vector<double>& state);
@@ -50,6 +52,7 @@ namespace ML {
             std::deque<Transition> memories;
             std::vector<std::vector<double> > states;
             std::vector<double> rewards;
+            std::vector<bool> isEnds;
             std::vector<std::vector<double> > q_main;
             std::vector<std::vector<double> > q_target;
             std::vector<std::vector<double> > q_main_next;

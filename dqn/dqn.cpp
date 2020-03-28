@@ -18,6 +18,7 @@ namespace ML {
         this->batchSize = batchSize;
         this->states.resize(batchSize);
         this->rewards.resize(batchSize);
+        this->isEnds.resize(batchSize);
         this->q_main.resize(batchSize);
         this->q_target.resize(batchSize);
         this->q_main_next.resize(batchSize);
@@ -38,7 +39,8 @@ namespace ML {
     void DQNet::perceive(std::vector<double>& state,
             std::vector<double>& action,
             std::vector<double>& nextState,
-            double reward)
+            double reward,
+            bool isEnd)
     {
         if (state.size() != stateDim || action.size() != actionDim
                 || nextState.size() != stateDim) {
@@ -49,6 +51,7 @@ namespace ML {
         transition.action = action;
         transition.nextState = nextState;
         transition.reward = reward;
+        transition.isEnd = isEnd;
         memories.push_back(transition);
         return;
     }
@@ -119,6 +122,7 @@ namespace ML {
             states[i] = memories[index].state;
             q_main[i] = memories[index].action;
             rewards[i] = memories[index].reward;
+            isEnds[i] = memories[index].isEnd;
             /* estimate q-target: DDQN Method */
             QTargetNet.feedForward(memories[index].nextState);
             q_target_next[i].assign(QTargetNetOutput.begin(), QTargetNetOutput.end());
@@ -129,7 +133,11 @@ namespace ML {
         for (int i = 0; i < q_target.size(); i++) {
             q_target[i].assign(actionDim, 0);
             int index = maxQ(q_main_next[i]);
-            q_target[i][index] = rewards[i] + gamma * q_target_next[i][index];
+            if (isEnds[i] == true) {
+                q_target[i][index] = rewards[i];
+            } else {
+                q_target[i][index] = rewards[i] + gamma * q_target_next[i][index];
+            }
         }
         /* train QMainNet */
         for (int i = 0; i < batchSize; i++) {
@@ -175,7 +183,11 @@ namespace ML {
             QMainNet.feedForward(x[i].nextState);
             qTarget.assign(actionDim, 0);
             int index = maxQ(QMainNetOutput);
-            qTarget[index] = x[i].reward + gamma * QTargetNetOutput[index];
+            if (x[i].isEnd == true) {
+                qTarget[index] = x[i].reward;
+            } else {
+                qTarget[index] = x[i].reward + gamma * QTargetNetOutput[index];
+            }
             /* train QMainNet */
             QMainNet.train(x[i].state, x[i].action, qTarget);
             /* add to memories */
