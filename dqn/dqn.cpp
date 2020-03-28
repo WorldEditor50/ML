@@ -1,8 +1,12 @@
 #include "dqn.h"
 namespace ML {
-    void DQNet::createNet(int stateDim, int actionDim, int hiddenDim, int hiddenLayerNum,
+    void DQNet::createNet(int stateDim, int hiddenDim, int hiddenLayerNum, int actionDim,
             int maxMemorySize, int replaceTargetIter, int batchSize, double learningRate)
     {
+        if (stateDim < 1 || hiddenDim < 1 || hiddenLayerNum < 1 || actionDim < 1 ||
+                maxMemorySize < 1 || replaceTargetIter < 1 || batchSize < 1 || learningRate < 0) {
+            return;
+        }
         this->gamma = 0.9;
         this->epsilonMax = 0.9;
         this->epsilon = 0;
@@ -10,6 +14,7 @@ namespace ML {
         this->actionDim = actionDim;
         this->learningRate = learningRate;
         this->maxMemorySize = maxMemorySize;
+        this->replaceTargetIter = replaceTargetIter;
         this->batchSize = batchSize;
         this->states.resize(batchSize);
         this->rewards.resize(batchSize);
@@ -35,6 +40,10 @@ namespace ML {
             std::vector<double>& nextState,
             double reward)
     {
+        if (state.size() != stateDim || action.size() != actionDim
+                || nextState.size() != stateDim) {
+            return;
+        }
         Transition transition;
         transition.state = state;
         transition.action = action;
@@ -55,6 +64,9 @@ namespace ML {
 
     int DQNet::eGreedyAction(std::vector<double> &state)
     {
+        if (state.size() != stateDim) {
+            return -1;
+        }
         double p = double(rand() % 1000) / 1000;
         int index = 0;
         if (p <= epsilon) {
@@ -128,6 +140,9 @@ namespace ML {
 
     void DQNet::learn(int iterateNum)
     {
+        if (iterateNum < 1) {
+            return;
+        }
         for (int i = 0; i < iterateNum; i++) {
             if (learningSteps % replaceTargetIter == 0) {
                 std::cout<<"update target net"<<std::endl;
