@@ -30,6 +30,15 @@ namespace ML {
         return DSigmoid(y);
     }
 
+    double Layer::dotProduct(std::vector<double>& x1, std::vector<double>& x2)
+    {
+        double sum = 0;
+        for (int i = 0; i < x1.size(); i++) {
+            sum += x1[i] * x2[i];
+        }
+        return sum;
+    }
+
     void Layer::createLayer(int inputDim, int layerDim)
     {
         if (layerDim < 1 || inputDim < 1) {
@@ -39,8 +48,11 @@ namespace ML {
         errors.resize(layerDim);
         bias.resize(layerDim);
         weights.resize(layerDim);
+        batchGradientX.resize(layerDim);
+        batchGradient.resize(layerDim);
         for (int i = 0; i < weights.size(); i++) {
             weights[i].resize(inputDim);
+            batchGradientX[i].resize(inputDim);
             /* init weights */
             for (int j = 0; j < weights[0].size(); j++) {
                 weights[i][j] = double(rand() % 1000 - rand() % 1000) / 1000;
@@ -60,11 +72,7 @@ namespace ML {
         }
         double y = 0;
         for (int i = 0; i < weights.size(); i++) {
-            y = 0;
-            for (int j = 0; j < weights[0].size(); j++) {
-                y += weights[i][j] * x[j]; 
-            }
-            y += bias[i];
+            y = dotProduct(weights[i], x) + bias[i];
             outputs[i] = activate(y);
         }
         return;
@@ -83,7 +91,7 @@ namespace ML {
         return;
     }
 
-    void Layer::adjustWeight(std::vector<double>& x, double learningRate)
+    void Layer::stochasticGradientDescent(std::vector<double>& x, double learningRate)
     {
         /*
          * e = (Activate(wx + b) - T)^2/2
@@ -98,6 +106,33 @@ namespace ML {
             }
             bias[i] -= learningRate * errors[i] * dOutput; 
             errors[i] = 0;
+        }
+        return;
+    }
+
+    void Layer::calculateBatchGradient(std::vector<double>& x)
+    {
+        double dOutput = 1;
+        for (int i = 0; i < batchGradientX.size(); i++) {
+            dOutput = derivativeActivate(outputs[i]);
+            for (int j = 0; j < batchGradientX[0].size(); j++) {
+                batchGradientX[i][j] += errors[i] * dOutput * x[j]; 
+            }
+            batchGradient[i] += errors[i] * dOutput; 
+            errors[i] = 0;
+        }
+        return;
+    }
+
+    void Layer::batchGradientDescent(double learningRate)
+    {
+        for (int i = 0; i < weights.size(); i++) {
+            for (int j = 0; j < weights[0].size(); j++) {
+                weights[i][j] -= learningRate * batchGradientX[i][j];
+                batchGradientX[i][j] = 0;
+            }
+            bias[i] -= learningRate * batchGradient[i]; 
+            batchGradient[i] = 0;
         }
         return;
     }
@@ -136,35 +171,6 @@ namespace ML {
         return;
     }
 
-    void BpNet::createNetWithConfig(BpNetConfig& config)
-    {
-        createNet(config.inputDim,
-                config.hiddenDim,
-                config.outputDim,
-                config.hiddenLayerNum,
-                config.learningRate);
-        return;
-    }
-
-    void BpNet::loadDataSet(const std::string& fileName, int rowNum, int featureNum, int targetNum)
-    {
-        std::ifstream file;
-        file.open(fileName);
-        for (int i = 0; i < rowNum; i++) {
-            std::vector<double> feature(featureNum);
-            std::vector<double> target(targetNum);
-            for (int j = 0; j < featureNum; j++) {
-                file>>feature[j];
-            }
-            for (int k = 0; k < targetNum; k++) {
-                file>>target[k];
-            }
-            features.push_back(feature);
-            targets.push_back(target);
-        }
-        return;
-    }
-
     void BpNet::feedForward(std::vector<double>& xi)
     {
         layers[0].calculateOutputs(xi);
@@ -193,34 +199,73 @@ namespace ML {
         return;
     }
 
-    void BpNet::updateWeight(std::vector<double>& xi)
+    void BpNet::batchGradientDescent(std::vector<std::vector<double> >& x,
+            std::vector<std::vector<double> >& yo,
+            std::vector<std::vector<double> >& yt)
     {
-        layers[0].adjustWeight(xi, learningRate);
-        for (int i = 1; i < layers.size(); i++) {
-            layers[i].adjustWeight(layers[i - 1].outputs, learningRate);
+        for (int i = 0; i < x.size(); i++) {
+            feedForward(x[i]);
+            backPropagate(yo[i], yt[i]);
+            /* calculate batch gradient */
+            for (int j = 0; j < layers.size(); j++) {
+                if (j == 0) {
+                    layers[j].calculateBatchGradient(x[i]);
+                } else {
+                    layers[j].calculateBatchGradient(layers[j - 1].outputs);
+                }
+            }
+        }
+        /* gradient descent */
+        for (int i = 0; i < layers.size(); i++) {
+            layers[i].batchGradientDescent(learningRate);
+        }
+        return;
+    }
+    void BpNet::batchGradientDescent(std::vector<std::vector<double> >& x,
+            std::vector<std::vector<double> >& y)
+    {
+        for (int i = 0; i < x.size(); i++) {
+            feedForward(x[i]);
+            backPropagate(layers[outputIndex].outputs, y[i]);
+            /* calculate batch gradient */
+            for (int j = 0; j < layers.size(); j++) {
+                if (j == 0) {
+                    layers[j].calculateBatchGradient(x[i]);
+                } else {
+                    layers[j].calculateBatchGradient(layers[j - 1].outputs);
+                }
+            }
+        }
+        /* gradient descent */
+        for (int i = 0; i < layers.size(); i++) {
+            layers[i].batchGradientDescent(learningRate);
         }
         return;
     }
 
-    void BpNet::train(int iterateNum)
-    {
-        train(features, targets, iterateNum);
-        return;
-    }
-
-    void BpNet::train(std::vector<double> &x, std::vector<double> &yo, std::vector<double> &yt)
+    void BpNet::stochasticGradientDescent(std::vector<double> &x, std::vector<double> &yo, std::vector<double> &yt)
     {
         if (yo.size() != yt.size()) {
             return;
         }
+        feedForward(x);
         /* calculate final error */
         backPropagate(yo, yt);
-        updateWeight(x);
+        /* gradient descent */
+        for (int j = 0; j < layers.size(); j++) {
+            if (j == 0) {
+                layers[j].stochasticGradientDescent(x, learningRate);
+            } else {
+                layers[j].stochasticGradientDescent(layers[j - 1].outputs, learningRate);
+            }
+        }
         return;
     }
 
 
-    void BpNet::train(std::vector<std::vector<double> >& x, std::vector<std::vector<double> >& y, int iterateNum)
+    void BpNet::train(std::vector<std::vector<double> >& x,
+            std::vector<std::vector<double> >& y,
+            int iterateNum)
     {
         if (x.empty() || y.empty()) {
             std::cout<<"x or y is empty"<<std::endl;
@@ -240,68 +285,18 @@ namespace ML {
         }
         for (int i = 0; i < iterateNum; i++) {
             int k = rand() % y.size();
-            feedForward(x[k]);
-            backPropagate(layers[outputIndex].outputs, y[k]);
-            updateWeight(x[k]);
+            stochasticGradientDescent(x[k], layers[outputIndex].outputs, y[k]);
         }
         return;
     }
 
     void BpNet::show()
     {
-#if 0
-        std::cout<<"features:"<<std::endl;;
-        for (int i = 0; i < features.size(); i++) {
-            for (int j = 0; j < features[0].size(); j++) {
-                std::cout<<features[i][j]<<" ";
-            }
-            std::cout<<std::endl;;
-        }
-        std::cout<<"targets:"<<std::endl;;
-        for (int i = 0; i < targets.size(); i++) {
-            for (int j = 0; j < targets[0].size(); j++) {
-                std::cout<<targets[i][j]<<" ";
-            }
-            std::cout<<std::endl;;
-        }
-#endif
         std::cout<<"outputs:"<<std::endl;;
         for (int i = 0; i < layers[outputIndex].outputs.size(); i++) {
             std::cout<<layers[outputIndex].outputs[i]<<" ";
         }
         std::cout<<std::endl;;
-        return;
-    }
-    void BpNet::loadFeature(const std::string& fileName, int rowNum, int colNum)
-    {
-        if (rowNum < 1 || colNum < 1) {
-            return;
-        }
-        std::ifstream file;
-        file.open(fileName);
-        for (int i = 0; i < rowNum; i++) {
-            std::vector<double> feature(colNum);
-            for (int j = 0; j < colNum; j++) {
-                file >> feature[j];
-            }
-            features.push_back(feature);
-        }
-        return;
-    }
-    void BpNet::loadTarget(const std::string& fileName, int rowNum, int colNum)
-    {
-        if (rowNum < 1 || colNum < 1) {
-            return;
-        }
-        std::ifstream file;
-        file.open(fileName);
-        for (int i = 0; i < rowNum; i++) {
-            std::vector<double> target(colNum);
-            for (int j = 0; j < colNum; j++) {
-                file >> target[j];
-            }
-            targets.push_back(target);
-        }
         return;
     }
     void BpNet::loadParameter(const std::string& fileName)
@@ -333,5 +328,4 @@ namespace ML {
         }
         return;
     }
-
 }

@@ -115,23 +115,21 @@ namespace ML {
             return;
         }
         /* sampling */
-        std::vector<double>& QTargetNetOutput = QTargetNet.getOutput();
-        std::vector<double>& QMainNetOutput = QMainNet.getOutput();
         for (int i = 0; i < batchSize; i++) {
             int index = rand() % memories.size();
             states[i] = memories[index].state;
             q_main[i] = memories[index].action;
+            q_target[i] = memories[index].action;
             rewards[i] = memories[index].reward;
             isEnds[i] = memories[index].isEnd;
             /* estimate q-target: DDQN Method */
             QTargetNet.feedForward(memories[index].nextState);
-            q_target_next[i].assign(QTargetNetOutput.begin(), QTargetNetOutput.end());
+            q_target_next[i] = QTargetNet.getOutput();
             QMainNet.feedForward(memories[index].nextState);
-            q_main_next[i].assign(QMainNetOutput.begin(), QMainNetOutput.end());
+            q_main_next[i] = QMainNet.getOutput();
         }
         /* estimate q-target: DDQN Method */
         for (int i = 0; i < q_target.size(); i++) {
-            q_target[i].assign(actionDim, 0);
             int index = maxQ(q_main_next[i]);
             if (isEnds[i] == true) {
                 q_target[i][index] = rewards[i];
@@ -141,7 +139,7 @@ namespace ML {
         }
         /* train QMainNet */
         for (int i = 0; i < batchSize; i++) {
-            QMainNet.train(states[i], q_main[i], q_target[i]);
+            QMainNet.batchGradientDescent(states, q_main, q_target);
         }
         return;
     }
@@ -181,7 +179,7 @@ namespace ML {
             /* estimate q-target: DDQN Method */
             QTargetNet.feedForward(x[i].nextState);
             QMainNet.feedForward(x[i].nextState);
-            qTarget.assign(actionDim, 0);
+            qTarget = QMainNetOutput;
             int index = maxQ(QMainNetOutput);
             if (x[i].isEnd == true) {
                 qTarget[index] = x[i].reward;
@@ -189,14 +187,9 @@ namespace ML {
                 qTarget[index] = x[i].reward + gamma * QTargetNetOutput[index];
             }
             /* train QMainNet */
-            QMainNet.train(x[i].state, x[i].action, qTarget);
+            QMainNet.stochasticGradientDescent(x[i].state, x[i].action, qTarget);
             /* add to memories */
             this->memories.push_back(x[i]);
-        }
-        /* experience replay */
-        double p = double(rand() % 1000) / 1000;
-        if (p > 0.3) {
-           learn(8);
         }
         return;
     }
