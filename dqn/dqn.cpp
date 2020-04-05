@@ -85,24 +85,18 @@ namespace ML {
         int index = 0;
         QMainNet.feedForward(state);
         std::vector<double>& action = QMainNet.getOutput();
-        double maxValue = action[0];
-        for (int i = 0; i < action.size(); i++) {
-            if (maxValue < action[i]) {
-                maxValue = action[i];
-                index = i;
-            }
-        }
+        index = maxQ(action);
         std::cout<<action[0]<<" "<<action[1]<<" "<<action[2]<<" "<<action[3]<<std::endl;
         return index;
     }
 
-    int DQNet::maxQ(std::vector<double>& qnext)
+    int DQNet::maxQ(std::vector<double>& q_value)
     {
-        double maxValue = qnext[0];
         int index = 0;
-        for (int i = 0; i < qnext.size(); i++) {
-            if (maxValue < qnext[i]) {
-                maxValue = qnext[i];
+        double maxValue = q_value[0];
+        for (int i = 0; i < q_value.size(); i++) {
+            if (maxValue < q_value[i]) {
+                maxValue = q_value[i];
                 index = i;
             }
         }
@@ -138,9 +132,7 @@ namespace ML {
             }
         }
         /* train QMainNet */
-        for (int i = 0; i < batchSize; i++) {
-            QMainNet.batchGradientDescent(states, q_main, q_target);
-        }
+        QMainNet.batchGradientDescent(states, q_main, q_target);
         return;
     }
 
@@ -188,8 +180,6 @@ namespace ML {
             }
             /* train QMainNet */
             QMainNet.stochasticGradientDescent(x[i].state, x[i].action, qTarget);
-            /* add to memories */
-            this->memories.push_back(x[i]);
         }
         return;
     }
