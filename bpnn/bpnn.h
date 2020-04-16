@@ -34,16 +34,18 @@ namespace ML {
             std::vector<double> batchGradient;
     };
 
-    class BpNet {
+    class BPNet {
         public:
-            BpNet(){}
-            ~BpNet(){}
+            BPNet(){}
+            ~BPNet(){}
             void createNet(int inputDim, int hiddenDim, int outputDim, int hiddenLayerNum, double learningRate);
-            void copyTo(BpNet& dstNet);
+            void copyTo(BPNet& dstNet);
             std::vector<double>& getOutput();
             void feedForward(std::vector<double>& xi);
             void backPropagate(std::vector<double>& yo, std::vector<double>& yt);
             void stochasticGradientDescent(std::vector<double> &x, std::vector<double> &yo, std::vector<double> &yt);
+            void calculateBatchGradient(std::vector<double> &x, std::vector<double> &yo, std::vector<double> &yt);
+            void updateWithBatchGradient();
             void batchGradientDescent(std::vector<std::vector<double> >& x,
                     std::vector<std::vector<double> >& yo,
                     std::vector<std::vector<double> >& yt);

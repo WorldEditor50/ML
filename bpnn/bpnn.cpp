@@ -137,7 +137,7 @@ namespace ML {
         return;
     }
 
-    void BpNet::createNet(int inputDim, int hiddenDim, int outputDim, int hiddenLayerNum, double learningRate)
+    void BPNet::createNet(int inputDim, int hiddenDim, int outputDim, int hiddenLayerNum, double learningRate)
     {
         Layer layer1; 
         layer1.createLayer(inputDim, hiddenDim);
@@ -155,7 +155,7 @@ namespace ML {
         return;
     }
 
-    void BpNet::copyTo(BpNet& dstNet)
+    void BPNet::copyTo(BPNet& dstNet)
     {
         if (layers.size() != dstNet.layers.size()) {
             return;
@@ -171,7 +171,7 @@ namespace ML {
         return;
     }
 
-    void BpNet::feedForward(std::vector<double>& xi)
+    void BPNet::feedForward(std::vector<double>& xi)
     {
         layers[0].calculateOutputs(xi);
         for (int i = 1; i < layers.size(); i++) {
@@ -180,13 +180,13 @@ namespace ML {
         return;
     }
 
-    std::vector<double>& BpNet::getOutput()
+    std::vector<double>& BPNet::getOutput()
     {
         std::vector<double>& outputs = layers[outputIndex].outputs;
         return outputs;
     }
 
-    void BpNet::backPropagate(std::vector<double>& yo, std::vector<double>& yt)
+    void BPNet::backPropagate(std::vector<double>& yo, std::vector<double>& yt)
     {
         /* calculate final error */
         for (int i = 0; i < yo.size(); i++) {
@@ -199,29 +199,42 @@ namespace ML {
         return;
     }
 
-    void BpNet::batchGradientDescent(std::vector<std::vector<double> >& x,
-            std::vector<std::vector<double> >& yo,
-            std::vector<std::vector<double> >& yt)
+    void BPNet::calculateBatchGradient(std::vector<double> &x, std::vector<double> &yo, std::vector<double> &yt)
     {
-        for (int i = 0; i < x.size(); i++) {
-            feedForward(x[i]);
-            backPropagate(yo[i], yt[i]);
+            feedForward(x);
+            backPropagate(yo, yt);
             /* calculate batch gradient */
             for (int j = 0; j < layers.size(); j++) {
                 if (j == 0) {
-                    layers[j].calculateBatchGradient(x[i]);
+                    layers[j].calculateBatchGradient(x);
                 } else {
                     layers[j].calculateBatchGradient(layers[j - 1].outputs);
                 }
             }
-        }
+
+        return;
+    }
+
+    void BPNet::updateWithBatchGradient()
+    {
         /* gradient descent */
         for (int i = 0; i < layers.size(); i++) {
             layers[i].batchGradientDescent(learningRate);
         }
         return;
     }
-    void BpNet::batchGradientDescent(std::vector<std::vector<double> >& x,
+
+    void BPNet::batchGradientDescent(std::vector<std::vector<double> >& x,
+            std::vector<std::vector<double> >& yo,
+            std::vector<std::vector<double> >& yt)
+    {
+        for (int i = 0; i < x.size(); i++) {
+            calculateBatchGradient(x[i], yo[i], yt[i]);
+        }
+        updateWithBatchGradient();
+        return;
+    }
+    void BPNet::batchGradientDescent(std::vector<std::vector<double> >& x,
             std::vector<std::vector<double> >& y)
     {
         for (int i = 0; i < x.size(); i++) {
@@ -237,13 +250,11 @@ namespace ML {
             }
         }
         /* gradient descent */
-        for (int i = 0; i < layers.size(); i++) {
-            layers[i].batchGradientDescent(learningRate);
-        }
+        updateWithBatchGradient();
         return;
     }
 
-    void BpNet::stochasticGradientDescent(std::vector<double> &x, std::vector<double> &yo, std::vector<double> &yt)
+    void BPNet::stochasticGradientDescent(std::vector<double> &x, std::vector<double> &yo, std::vector<double> &yt)
     {
         if (yo.size() != yt.size()) {
             return;
@@ -263,7 +274,7 @@ namespace ML {
     }
 
 
-    void BpNet::train(std::vector<std::vector<double> >& x,
+    void BPNet::train(std::vector<std::vector<double> >& x,
             std::vector<std::vector<double> >& y,
             int iterateNum)
     {
@@ -290,7 +301,7 @@ namespace ML {
         return;
     }
 
-    void BpNet::show()
+    void BPNet::show()
     {
         std::cout<<"outputs:"<<std::endl;;
         for (int i = 0; i < layers[outputIndex].outputs.size(); i++) {
@@ -299,7 +310,7 @@ namespace ML {
         std::cout<<std::endl;;
         return;
     }
-    void BpNet::loadParameter(const std::string& fileName)
+    void BPNet::loadParameter(const std::string& fileName)
     {
         std::ifstream file;
         file.open(fileName);
@@ -313,7 +324,7 @@ namespace ML {
         }
         return;
     }
-    void BpNet::saveParameter(const std::string& fileName)
+    void BPNet::saveParameter(const std::string& fileName)
     {
         std::ofstream file;
         file.open(fileName);
