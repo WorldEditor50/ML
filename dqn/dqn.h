@@ -32,10 +32,8 @@ namespace ML {
             int eGreedyAction(std::vector<double>& state);
             int action(std::vector<double>& state);
             int maxQ(std::vector<double>& q_value);
-            void experienceReplay();
             void experienceReplay(Transition& x);
             void learn();
-            void learn(int iterateNum);
             void onlineLearning(std::vector<Transition>& x);
             void save(const std::string& fileName);
             void load(const std::string& fileName);
@@ -49,16 +47,9 @@ namespace ML {
             double learningRate;
             int learningSteps;
             int replaceTargetIter;
-            BpNet QMainNet;
-            BpNet QTargetNet;
+            BPNet QMainNet;
+            BPNet QTargetNet;
             std::deque<Transition> memories;
-            std::vector<std::vector<double> > states;
-            std::vector<double> rewards;
-            std::vector<bool> isEnds;
-            std::vector<std::vector<double> > q_main;
-            std::vector<std::vector<double> > q_target;
-            std::vector<std::vector<double> > q_main_next;
-            std::vector<std::vector<double> > q_target_next;
     };
 }
 #endif // DQNN_H

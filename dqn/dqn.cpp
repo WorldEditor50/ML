@@ -16,20 +16,6 @@ namespace ML {
         this->maxMemorySize = maxMemorySize;
         this->replaceTargetIter = replaceTargetIter;
         this->batchSize = batchSize;
-        this->states.resize(batchSize);
-        this->rewards.resize(batchSize);
-        this->isEnds.resize(batchSize);
-        this->q_main.resize(batchSize);
-        this->q_target.resize(batchSize);
-        this->q_main_next.resize(batchSize);
-        this->q_target_next.resize(batchSize);
-        for (int i = 0; i < batchSize; i++) {
-            states[i].resize(stateDim, 0);
-            q_main[i].resize(actionDim, 0);
-            q_target[i].resize(actionDim, 0);
-            q_main_next[i].resize(actionDim, 0);
-            q_target_next[i].resize(actionDim, 0);
-        }
         this->QMainNet.createNet(stateDim, hiddenDim, actionDim, hiddenLayerNum, learningRate);
         this->QTargetNet.createNet(stateDim, hiddenDim, actionDim, hiddenLayerNum, learningRate);
         this->QMainNet.copyTo(QTargetNet);
@@ -103,39 +89,6 @@ namespace ML {
         return index;
     }
 
-    void DQNet::experienceReplay()
-    {
-        if (memories.size() < batchSize) {
-            return;
-        }
-        /* sampling */
-        for (int i = 0; i < batchSize; i++) {
-            int index = rand() % memories.size();
-            states[i] = memories[index].state;
-            q_main[i] = memories[index].action;
-            q_target[i] = memories[index].action;
-            rewards[i] = memories[index].reward;
-            isEnds[i] = memories[index].isEnd;
-            /* estimate q-target: DDQN Method */
-            QTargetNet.feedForward(memories[index].nextState);
-            q_target_next[i] = QTargetNet.getOutput();
-            QMainNet.feedForward(memories[index].nextState);
-            q_main_next[i] = QMainNet.getOutput();
-        }
-        /* estimate q-target: DDQN Method */
-        for (int i = 0; i < q_target.size(); i++) {
-            int index = maxQ(q_main_next[i]);
-            if (isEnds[i] == true) {
-                q_target[i][index] = rewards[i];
-            } else {
-                q_target[i][index] = rewards[i] + gamma * q_target_next[i][index];
-            }
-        }
-        /* train QMainNet */
-        QMainNet.batchGradientDescent(states, q_main, q_target);
-        return;
-    }
-
     void DQNet::experienceReplay(Transition& x)
     {
         std::vector<double> qTarget(actionDim);
@@ -144,7 +97,7 @@ namespace ML {
         /* estimate q-target: DDQN Method */
         QTargetNet.feedForward(x.nextState);
         QMainNet.feedForward(x.nextState);
-        qTarget = QMainNetOutput;
+        qTarget = x.action;
         int index = maxQ(QMainNetOutput);
         if (x.isEnd == true) {
             qTarget[index] = x.reward;
@@ -152,7 +105,7 @@ namespace ML {
             qTarget[index] = x.reward + gamma * QTargetNetOutput[index];
         }
         /* train QMainNet */
-        QMainNet.stochasticGradientDescent(x.state, x.action, qTarget);
+        QMainNet.calculateBatchGradient(x.state, x.action, qTarget);
         return;
     }
 
@@ -171,37 +124,11 @@ namespace ML {
         for (int i = 0; i < batchSize; i++) {
             int k = rand() % memories.size();
             experienceReplay(memories[k]);
-            learningSteps++;
         }
+        QMainNet.updateWithBatchGradient();
         /* update step */
         if (epsilon < epsilonMax) {
             epsilon += 0.0001;
-        }
-        /* reduce memory */
-        if (memories.size() > maxMemorySize) {
-            forget();
-        }
-        return;
-    }
-
-    void DQNet::learn(int iterateNum)
-    {
-        if (iterateNum < 1) {
-            return;
-        }
-        for (int i = 0; i < iterateNum; i++) {
-            if (learningSteps % replaceTargetIter == 0) {
-                std::cout<<"update target net"<<std::endl;
-                /* update tagetNet */
-                QMainNet.copyTo(QTargetNet);
-                learningSteps = 0;
-            }
-            /* experience replay */
-            experienceReplay();
-            /* update step */
-            if (epsilon < epsilonMax) {
-                epsilon += 0.0001;
-            }
         }
         /* reduce memory */
         if (memories.size() > maxMemorySize) {
@@ -221,12 +148,13 @@ namespace ML {
         }
         for (int i = 0; i < x.size(); i++) {
             experienceReplay(x[i]);
-            learningSteps++;
         }
+        QMainNet.updateWithBatchGradient();
         /* update step */
         if (epsilon < epsilonMax) {
             epsilon += 0.0001;
         }
+        learningSteps++;
         return;
     }
 
