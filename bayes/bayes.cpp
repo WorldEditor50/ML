@@ -98,6 +98,7 @@ namespace ML {
     {
         /* laplace smoothing */
         int lambda = 1;
+        int k = elements.size();
         std::vector<int> y_num(labels.size());
         /* margin probability */
         for (int i = 0; i < margin.size(); i++) {
@@ -113,7 +114,7 @@ namespace ML {
             int num = 0;
             for (int j = 0; j < condition[0].size(); j++) {
                 num = indicator(j, i);
-                condition[i][j] = double(num + lambda) / double(y_num[i] + lambda);
+                condition[i][j] = double(num + lambda) / double(y_num[i] + k);
             }
         }
         return;

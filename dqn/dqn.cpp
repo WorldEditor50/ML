@@ -136,6 +136,54 @@ namespace ML {
         return;
     }
 
+    void DQNet::experienceReplay(Transition& x)
+    {
+        std::vector<double> qTarget(actionDim);
+        std::vector<double>& QTargetNetOutput = QTargetNet.getOutput();
+        std::vector<double>& QMainNetOutput = QMainNet.getOutput();
+        /* estimate q-target: DDQN Method */
+        QTargetNet.feedForward(x.nextState);
+        QMainNet.feedForward(x.nextState);
+        qTarget = QMainNetOutput;
+        int index = maxQ(QMainNetOutput);
+        if (x.isEnd == true) {
+            qTarget[index] = x.reward;
+        } else {
+            qTarget[index] = x.reward + gamma * QTargetNetOutput[index];
+        }
+        /* train QMainNet */
+        QMainNet.stochasticGradientDescent(x.state, x.action, qTarget);
+        return;
+    }
+
+    void DQNet::learn()
+    {
+        if (memories.size() < batchSize) {
+            return;
+        }
+        if (learningSteps % replaceTargetIter == 0) {
+            std::cout<<"update target net"<<std::endl;
+            /* update tagetNet */
+            QMainNet.copyTo(QTargetNet);
+            learningSteps = 0;
+        }
+        /* experience replay */
+        for (int i = 0; i < batchSize; i++) {
+            int k = rand() % memories.size();
+            experienceReplay(memories[k]);
+            learningSteps++;
+        }
+        /* update step */
+        if (epsilon < epsilonMax) {
+            epsilon += 0.0001;
+        }
+        /* reduce memory */
+        if (memories.size() > maxMemorySize) {
+            forget();
+        }
+        return;
+    }
+
     void DQNet::learn(int iterateNum)
     {
         if (iterateNum < 1) {
@@ -146,6 +194,7 @@ namespace ML {
                 std::cout<<"update target net"<<std::endl;
                 /* update tagetNet */
                 QMainNet.copyTo(QTargetNet);
+                learningSteps = 0;
             }
             /* experience replay */
             experienceReplay();
@@ -153,33 +202,30 @@ namespace ML {
             if (epsilon < epsilonMax) {
                 epsilon += 0.0001;
             }
-            learningSteps++;
         }
         /* reduce memory */
         if (memories.size() > maxMemorySize) {
             forget();
         }
+        learningSteps++;
         return;
     }
 
     void DQNet::onlineLearning(std::vector<Transition>& x)
     {
-        std::vector<double> qTarget(actionDim);
-        std::vector<double>& QTargetNetOutput = QTargetNet.getOutput();
-        std::vector<double>& QMainNetOutput = QMainNet.getOutput();
+        if (learningSteps % replaceTargetIter == 0) {
+            std::cout<<"update target net"<<std::endl;
+            /* update tagetNet */
+            QMainNet.copyTo(QTargetNet);
+            learningSteps = 0;
+        }
         for (int i = 0; i < x.size(); i++) {
-            /* estimate q-target: DDQN Method */
-            QTargetNet.feedForward(x[i].nextState);
-            QMainNet.feedForward(x[i].nextState);
-            qTarget = QMainNetOutput;
-            int index = maxQ(QMainNetOutput);
-            if (x[i].isEnd == true) {
-                qTarget[index] = x[i].reward;
-            } else {
-                qTarget[index] = x[i].reward + gamma * QTargetNetOutput[index];
-            }
-            /* train QMainNet */
-            QMainNet.stochasticGradientDescent(x[i].state, x[i].action, qTarget);
+            experienceReplay(x[i]);
+            learningSteps++;
+        }
+        /* update step */
+        if (epsilon < epsilonMax) {
+            epsilon += 0.0001;
         }
         return;
     }

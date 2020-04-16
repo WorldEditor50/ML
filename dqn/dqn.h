@@ -31,8 +31,10 @@ namespace ML {
             void forget();
             int eGreedyAction(std::vector<double>& state);
             int action(std::vector<double>& state);
-            void experienceReplay();
             int maxQ(std::vector<double>& q_value);
+            void experienceReplay();
+            void experienceReplay(Transition& x);
+            void learn();
             void learn(int iterateNum);
             void onlineLearning(std::vector<Transition>& x);
             void save(const std::string& fileName);

@@ -104,7 +104,7 @@ namespace ML {
             for (int j = 0; j < weights[0].size(); j++) {
                 weights[i][j] -= learningRate * errors[i] * dOutput * x[j];
             }
-            bias[i] -= learningRate * errors[i] * dOutput; 
+            bias[i] -= learningRate * errors[i] * dOutput;
             errors[i] = 0;
         }
         return;
@@ -131,7 +131,7 @@ namespace ML {
                 weights[i][j] -= learningRate * batchGradientX[i][j];
                 batchGradientX[i][j] = 0;
             }
-            bias[i] -= learningRate * batchGradient[i]; 
+            bias[i] -= learningRate * batchGradient[i];
             batchGradient[i] = 0;
         }
         return;
