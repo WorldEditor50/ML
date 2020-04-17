@@ -16,8 +16,8 @@ namespace ML {
         this->maxMemorySize = maxMemorySize;
         this->replaceTargetIter = replaceTargetIter;
         this->batchSize = batchSize;
-        this->QMainNet.createNet(stateDim, hiddenDim, actionDim, hiddenLayerNum, learningRate);
-        this->QTargetNet.createNet(stateDim, hiddenDim, actionDim, hiddenLayerNum, learningRate);
+        this->QMainNet.createNet(stateDim, hiddenDim, hiddenLayerNum, actionDim, RELU, learningRate);
+        this->QTargetNet.createNet(stateDim, hiddenDim, hiddenLayerNum, actionDim, RELU, learningRate);
         this->QMainNet.copyTo(QTargetNet);
         return;
     }
@@ -26,7 +26,7 @@ namespace ML {
             std::vector<double>& action,
             std::vector<double>& nextState,
             double reward,
-            bool isEnd)
+            bool done)
     {
         if (state.size() != stateDim || action.size() != actionDim
                 || nextState.size() != stateDim) {
@@ -37,7 +37,7 @@ namespace ML {
         transition.action = action;
         transition.nextState = nextState;
         transition.reward = reward;
-        transition.isEnd = isEnd;
+        transition.done = done;
         memories.push_back(transition);
         return;
     }
@@ -99,7 +99,7 @@ namespace ML {
         QMainNet.feedForward(x.nextState);
         qTarget = x.action;
         int index = maxQ(QMainNetOutput);
-        if (x.isEnd == true) {
+        if (x.done == true) {
             qTarget[index] = x.reward;
         } else {
             qTarget[index] = x.reward + gamma * QTargetNetOutput[index];

@@ -8,12 +8,13 @@
 #include <ctime>
 #include <cstdlib>
 namespace ML {
-
+#define SIGMOID 0
+#define RELU    1
     class Layer {
         public:
             Layer(){}
             ~Layer(){}
-            void createLayer(int inputDim, int layerDim);
+            void createLayer(int inputDim, int layerDim, int activateMethod);
             double activate(double x);
             double derivativeActivate(double y);
             void calculateOutputs(std::vector<double>& x);
@@ -22,10 +23,11 @@ namespace ML {
             void calculateBatchGradient(std::vector<double>& x);
             void batchGradientDescent(double learningRate);
             double sigmoid(double x);
-            double DSigmoid(double y);
-            double RELU(double x);
-            double DRELU(double x);
+            double dsigmoid(double y);
+            double relu(double x);
+            double drelu(double x);
             double dotProduct(std::vector<double>& x1, std::vector<double>& x2);
+            int activateMethod;
             std::vector<double> outputs;
             std::vector<double> errors;
             std::vector<std::vector<double> > weights;
@@ -38,13 +40,19 @@ namespace ML {
         public:
             BPNet(){}
             ~BPNet(){}
-            void createNet(int inputDim, int hiddenDim, int outputDim, int hiddenLayerNum, double learningRate);
+            void createNet(int inputDim, int hiddenDim, int hiddenLayerNum, int outputDim,
+                    int activateMethod, double learningRate);
             void copyTo(BPNet& dstNet);
             std::vector<double>& getOutput();
             void feedForward(std::vector<double>& xi);
-            void backPropagate(std::vector<double>& yo, std::vector<double>& yt);
-            void stochasticGradientDescent(std::vector<double> &x, std::vector<double> &yo, std::vector<double> &yt);
-            void calculateBatchGradient(std::vector<double> &x, std::vector<double> &yo, std::vector<double> &yt);
+            void backPropagate(std::vector<double>& yo,
+                    std::vector<double>& yt);
+            void stochasticGradientDescent(std::vector<double> &x,
+                    std::vector<double> &yo,
+                    std::vector<double> &yt);
+            void calculateBatchGradient(std::vector<double> &x,
+                    std::vector<double> &yo,
+                    std::vector<double> &yt);
             void updateWithBatchGradient();
             void batchGradientDescent(std::vector<std::vector<double> >& x,
                     std::vector<std::vector<double> >& yo,

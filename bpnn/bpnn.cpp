@@ -5,29 +5,53 @@ namespace ML {
         return exp(x) / (exp(x) + 1);
     }
 
-    double Layer::DSigmoid(double y)
+    double Layer::dsigmoid(double y)
     {
         return y * (1 - y);
     }
 
-    double Layer::RELU(double x)
+    double Layer::relu(double x)
     {
         return x > 0 ? x : 0;
     }
 
-    double Layer::DRELU(double x)
+    double Layer::drelu(double x)
     {
         return x > 0 ? 1 : 0;
     }
 
     double Layer::activate(double x)
     {
-        return sigmoid(x);
+        double y = 0;
+        switch (activateMethod) {
+            case SIGMOID:
+                y = sigmoid(x);
+                break;
+            case RELU:
+                y = relu(x);
+                break;
+            default:
+                y = sigmoid(x);
+                break;
+        }
+        return y;
     }
 
     double Layer::derivativeActivate(double y)
     {
-        return DSigmoid(y);
+        double dy = 0;
+        switch (activateMethod) {
+            case SIGMOID:
+                dy = dsigmoid(y);
+                break;
+            case RELU:
+                dy = drelu(y);
+                break;
+            default:
+                dy = dsigmoid(y);
+                break;
+        }
+        return dy;
     }
 
     double Layer::dotProduct(std::vector<double>& x1, std::vector<double>& x2)
@@ -39,11 +63,12 @@ namespace ML {
         return sum;
     }
 
-    void Layer::createLayer(int inputDim, int layerDim)
+    void Layer::createLayer(int inputDim, int layerDim, int activateMethod)
     {
         if (layerDim < 1 || inputDim < 1) {
             return;
         }
+        this->activateMethod = activateMethod;
         outputs.resize(layerDim);
         errors.resize(layerDim);
         bias.resize(layerDim);
@@ -137,18 +162,19 @@ namespace ML {
         return;
     }
 
-    void BPNet::createNet(int inputDim, int hiddenDim, int outputDim, int hiddenLayerNum, double learningRate)
+    void BPNet::createNet(int inputDim, int hiddenDim, int hiddenLayerNum, int outputDim,
+            int activateMethod, double learningRate)
     {
         Layer layer1; 
-        layer1.createLayer(inputDim, hiddenDim);
+        layer1.createLayer(inputDim, hiddenDim, activateMethod);
         layers.push_back(layer1);
         for (int i = 1; i < hiddenLayerNum; i++) {
             Layer layer;
-            layer.createLayer(hiddenDim, hiddenDim);
+            layer.createLayer(hiddenDim, hiddenDim, activateMethod);
             layers.push_back(layer);
         }
         Layer outputLayer; 
-        outputLayer.createLayer(hiddenDim, outputDim);
+        outputLayer.createLayer(hiddenDim, outputDim, activateMethod);
         layers.push_back(outputLayer);
         this->learningRate = learningRate;
         this->outputIndex = layers.size() - 1;

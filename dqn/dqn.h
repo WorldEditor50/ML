@@ -15,7 +15,7 @@ namespace ML {
         std::vector<double> action;
         std::vector<double> nextState;
         double reward;
-        bool isEnd;
+        bool done;
     };
     class DQNet {
         public:
@@ -27,7 +27,7 @@ namespace ML {
                     std::vector<double>& action,
                     std::vector<double>& nextState,
                     double reward,
-                    bool isEnd);
+                    bool done);
             void forget();
             int eGreedyAction(std::vector<double>& state);
             int action(std::vector<double>& state);

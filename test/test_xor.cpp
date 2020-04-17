@@ -12,7 +12,7 @@ void test_bpnn(vector<vector<double> >& x)
 {
     cout<<"bpnn:"<<endl;
     BPNet bp;
-    bp.createNet(2, 4, 1, 1, 0.3);
+    bp.createNet(2, 4, 1, 1, SIGMOID, 0.3);
     vector<vector<double> > y(4);
     for (int i = 0; i < 4; i++) {
         y[i].resize(1);
