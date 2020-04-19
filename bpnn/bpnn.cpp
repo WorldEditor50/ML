@@ -10,6 +10,11 @@ namespace ML {
         return y * (1 - y);
     }
 
+    double Layer::dtanh(double y)
+    {
+        return 1 - y * y;
+    }
+
     double Layer::relu(double x)
     {
         return x > 0 ? x : 0;
@@ -30,6 +35,9 @@ namespace ML {
             case RELU:
                 y = relu(x);
                 break;
+            case TANH:
+                y = tanh(x);
+                break;
             default:
                 y = sigmoid(x);
                 break;
@@ -46,6 +54,9 @@ namespace ML {
                 break;
             case RELU:
                 dy = drelu(y);
+                break;
+            case TANH:
+                y = dtanh(y);
                 break;
             default:
                 dy = dsigmoid(y);
@@ -116,7 +127,7 @@ namespace ML {
         return;
     }
 
-    void Layer::stochasticGradientDescent(std::vector<double>& x, double learningRate)
+    void Layer::SGD(std::vector<double>& x, double learningRate)
     {
         /*
          * e = (Activate(wx + b) - T)^2/2
@@ -149,7 +160,7 @@ namespace ML {
         return;
     }
 
-    void Layer::batchGradientDescent(double learningRate)
+    void Layer::BGD(double learningRate)
     {
         for (int i = 0; i < weights.size(); i++) {
             for (int j = 0; j < weights[0].size(); j++) {
@@ -227,17 +238,30 @@ namespace ML {
 
     void BPNet::calculateBatchGradient(std::vector<double> &x, std::vector<double> &yo, std::vector<double> &yt)
     {
-            feedForward(x);
-            backPropagate(yo, yt);
-            /* calculate batch gradient */
-            for (int j = 0; j < layers.size(); j++) {
-                if (j == 0) {
-                    layers[j].calculateBatchGradient(x);
-                } else {
-                    layers[j].calculateBatchGradient(layers[j - 1].outputs);
-                }
+        backPropagate(yo, yt);
+        /* calculate batch gradient */
+        for (int j = 0; j < layers.size(); j++) {
+            if (j == 0) {
+                layers[j].calculateBatchGradient(x);
+            } else {
+                layers[j].calculateBatchGradient(layers[j - 1].outputs);
             }
+        }
+        return;
+    }
 
+    void BPNet::calculateBatchGradient(std::vector<double> &x, std::vector<double> &y)
+    {
+        feedForward(x);
+        backPropagate(layers[outputIndex].outputs, y);
+        /* calculate batch gradient */
+        for (int j = 0; j < layers.size(); j++) {
+            if (j == 0) {
+                layers[j].calculateBatchGradient(x);
+            } else {
+                layers[j].calculateBatchGradient(layers[j - 1].outputs);
+            }
+        }
         return;
     }
 
@@ -245,12 +269,12 @@ namespace ML {
     {
         /* gradient descent */
         for (int i = 0; i < layers.size(); i++) {
-            layers[i].batchGradientDescent(learningRate);
+            layers[i].BGD(learningRate);
         }
         return;
     }
 
-    void BPNet::batchGradientDescent(std::vector<std::vector<double> >& x,
+    void BPNet::BGD(std::vector<std::vector<double> >& x,
             std::vector<std::vector<double> >& yo,
             std::vector<std::vector<double> >& yt)
     {
@@ -260,27 +284,19 @@ namespace ML {
         updateWithBatchGradient();
         return;
     }
-    void BPNet::batchGradientDescent(std::vector<std::vector<double> >& x,
+
+    void BPNet::BGD(std::vector<std::vector<double> >& x,
             std::vector<std::vector<double> >& y)
     {
         for (int i = 0; i < x.size(); i++) {
-            feedForward(x[i]);
-            backPropagate(layers[outputIndex].outputs, y[i]);
-            /* calculate batch gradient */
-            for (int j = 0; j < layers.size(); j++) {
-                if (j == 0) {
-                    layers[j].calculateBatchGradient(x[i]);
-                } else {
-                    layers[j].calculateBatchGradient(layers[j - 1].outputs);
-                }
-            }
+            calculateBatchGradient(x[i], y[i]);
         }
         /* gradient descent */
         updateWithBatchGradient();
         return;
     }
 
-    void BPNet::stochasticGradientDescent(std::vector<double> &x, std::vector<double> &yo, std::vector<double> &yt)
+    void BPNet::SGD(std::vector<double> &x, std::vector<double> &yo, std::vector<double> &yt)
     {
         if (yo.size() != yt.size()) {
             return;
@@ -291,9 +307,9 @@ namespace ML {
         /* gradient descent */
         for (int j = 0; j < layers.size(); j++) {
             if (j == 0) {
-                layers[j].stochasticGradientDescent(x, learningRate);
+                layers[j].SGD(x, learningRate);
             } else {
-                layers[j].stochasticGradientDescent(layers[j - 1].outputs, learningRate);
+                layers[j].SGD(layers[j - 1].outputs, learningRate);
             }
         }
         return;
@@ -322,7 +338,7 @@ namespace ML {
         }
         for (int i = 0; i < iterateNum; i++) {
             int k = rand() % y.size();
-            stochasticGradientDescent(x[k], layers[outputIndex].outputs, y[k]);
+            SGD(x[k], layers[outputIndex].outputs, y[k]);
         }
         return;
     }
@@ -336,6 +352,7 @@ namespace ML {
         std::cout<<std::endl;;
         return;
     }
+
     void BPNet::loadParameter(const std::string& fileName)
     {
         std::ifstream file;
@@ -350,6 +367,7 @@ namespace ML {
         }
         return;
     }
+
     void BPNet::saveParameter(const std::string& fileName)
     {
         std::ofstream file;

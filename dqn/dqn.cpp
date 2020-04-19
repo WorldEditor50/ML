@@ -56,12 +56,16 @@ namespace ML {
         if (state.size() != stateDim) {
             return -1;
         }
-        double p = double(rand() % 1000) / 1000;
+        double p = double(rand() % 10000) / 10000;
         int index = 0;
         if (p <= epsilon) {
             index = action(state);
         } else {
-            index = rand() % actionDim;
+            std::vector<double>& QMainNetOutput = QMainNet.getOutput();
+            for (int i = 0; i < QMainNetOutput.size(); i++) {
+                QMainNetOutput[i] = double(rand() % 10000) / 10000;
+            }
+            index = maxQ(QMainNetOutput);
         }
         return index;
     }
@@ -72,7 +76,6 @@ namespace ML {
         QMainNet.feedForward(state);
         std::vector<double>& action = QMainNet.getOutput();
         index = maxQ(action);
-        std::cout<<action[0]<<" "<<action[1]<<" "<<action[2]<<" "<<action[3]<<std::endl;
         return index;
     }
 
@@ -94,7 +97,7 @@ namespace ML {
         std::vector<double> qTarget(actionDim);
         std::vector<double>& QTargetNetOutput = QTargetNet.getOutput();
         std::vector<double>& QMainNetOutput = QMainNet.getOutput();
-        /* estimate q-target: DDQN Method */
+        /* estimate q-target: Q-Regression */
         QTargetNet.feedForward(x.nextState);
         QMainNet.feedForward(x.nextState);
         qTarget = x.action;
@@ -147,7 +150,8 @@ namespace ML {
             learningSteps = 0;
         }
         for (int i = 0; i < x.size(); i++) {
-            experienceReplay(x[i]);
+            int k = rand() % x.size();
+            experienceReplay(x[k]);
         }
         QMainNet.updateWithBatchGradient();
         /* update step */

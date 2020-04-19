@@ -9,7 +9,8 @@
 #include <cstdlib>
 namespace ML {
 #define SIGMOID 0
-#define RELU    1
+#define TANH    1
+#define RELU    2
     class Layer {
         public:
             Layer(){}
@@ -19,11 +20,13 @@ namespace ML {
             double derivativeActivate(double y);
             void calculateOutputs(std::vector<double>& x);
             void calculateErrors(std::vector<double>& nextErrors, std::vector<std::vector<double> >& nextWeights);
-            void stochasticGradientDescent(std::vector<double>& x, double learningRate);
+            void SGD(std::vector<double>& x, double learningRate);
             void calculateBatchGradient(std::vector<double>& x);
-            void batchGradientDescent(double learningRate);
+            void BGD(double learningRate);
+            void RMSProp();
             double sigmoid(double x);
             double dsigmoid(double y);
+            double dtanh(double y);
             double relu(double x);
             double drelu(double x);
             double dotProduct(std::vector<double>& x1, std::vector<double>& x2);
@@ -47,18 +50,21 @@ namespace ML {
             void feedForward(std::vector<double>& xi);
             void backPropagate(std::vector<double>& yo,
                     std::vector<double>& yt);
-            void stochasticGradientDescent(std::vector<double> &x,
+            void SGD(std::vector<double> &x,
                     std::vector<double> &yo,
                     std::vector<double> &yt);
             void calculateBatchGradient(std::vector<double> &x,
                     std::vector<double> &yo,
                     std::vector<double> &yt);
+            void calculateBatchGradient(std::vector<double> &x,
+                    std::vector<double> &y);
             void updateWithBatchGradient();
-            void batchGradientDescent(std::vector<std::vector<double> >& x,
+            void BGD(std::vector<std::vector<double> >& x,
                     std::vector<std::vector<double> >& yo,
                     std::vector<std::vector<double> >& yt);
-            void batchGradientDescent(std::vector<std::vector<double> >& x,
+            void BGD(std::vector<std::vector<double> >& x,
                     std::vector<std::vector<double> >& y);
+            void RMSProp();
             void train(std::vector<std::vector<double> >& x,
                     std::vector<std::vector<double> >& y,
                     int iterateNum);

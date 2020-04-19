@@ -23,7 +23,7 @@ void test_bpnn(vector<vector<double> >& x)
     y[3][0] = 0;
     //bp.train(x, y, 10000);
     for (int i = 0; i < 10000; i++) {
-        bp.batchGradientDescent(x, y);
+        bp.BGD(x, y);
     }
     vector<double>& yi = bp.getOutput();
     for (int i = 0; i < 4; i++) {
