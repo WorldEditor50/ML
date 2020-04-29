@@ -29,13 +29,13 @@ namespace ML {
     {
         double y = 0;
         switch (activateMethod) {
-            case SIGMOID:
+            case ACTIVATE_SIGMOID:
                 y = sigmoid(x);
                 break;
-            case RELU:
+            case ACTIVATE_RELU:
                 y = relu(x);
                 break;
-            case TANH:
+            case ACTIVATE_TANH:
                 y = tanh(x);
                 break;
             default:
@@ -49,13 +49,13 @@ namespace ML {
     {
         double dy = 0;
         switch (activateMethod) {
-            case SIGMOID:
+            case ACTIVATE_SIGMOID:
                 dy = dsigmoid(y);
                 break;
-            case RELU:
+            case ACTIVATE_RELU:
                 dy = drelu(y);
                 break;
-            case TANH:
+            case ACTIVATE_TANH:
                 y = dtanh(y);
                 break;
             default:
@@ -84,19 +84,36 @@ namespace ML {
         errors.resize(layerDim);
         bias.resize(layerDim);
         weights.resize(layerDim);
+        /* buffer for optimization */
         batchGradientX.resize(layerDim);
         batchGradient.resize(layerDim);
+        sx.resize(layerDim);
+        sb.resize(layerDim, 0);
+        vx.resize(layerDim);
+        vb.resize(layerDim, 0);
+        this->alpha1_t = 1;
+        this->alpha2_t = 1;
+        this->delta = pow(10, -8);
+        /* init weights */
         for (int i = 0; i < weights.size(); i++) {
             weights[i].resize(inputDim);
             batchGradientX[i].resize(inputDim);
+            sx[i].resize(inputDim, 0);
+            vx[i].resize(inputDim, 0);
             /* init weights */
             for (int j = 0; j < weights[0].size(); j++) {
-                weights[i][j] = double(rand() % 1000 - rand() % 1000) / 1000;
+                weights[i][j] = double(rand() % 10000 - rand() % 10000) / 10000;
             }
             /* init bias */
-            bias[i] = double(rand() % 1000 - rand() % 1000) / 1000;
+            bias[i] = double(rand() % 10000 - rand() % 10000) / 10000;
             errors[i] = 0;
         }
+        return;
+    }
+
+    void Layer::createSoftmaxLayer(int inputDim, int layerDim, int activateMethod)
+    {
+
         return;
     }
 
@@ -173,8 +190,67 @@ namespace ML {
         return;
     }
 
-    void BPNet::createNet(int inputDim, int hiddenDim, int hiddenLayerNum, int outputDim,
-            int activateMethod, double learningRate)
+    void Layer::RMSProp(double rho, double learningRate)
+    {
+        for (int i = 0; i < weights.size(); i++) {
+            for (int j = 0; j < weights[0].size(); j++) {
+                double gx = batchGradientX[i][j];
+                sx[i][j] = rho * sx[i][j] + (1 - rho) * gx * gx;
+                weights[i][j] -= learningRate * gx / (sqrt(sx[i][j]) + delta);
+                batchGradientX[i][j] = 0;
+            }
+            double gb = batchGradient[i];
+            sb[i] = rho * sb[i] + (1 - rho) * gb * gb;
+            bias[i] -= learningRate * gb / (sqrt(sb[i]) + delta);
+            batchGradient[i] = 0;
+        }
+        return;
+    }
+
+    void Layer::Adam(double alpha1, double alpha2, double learningRate)
+    {
+        double v;
+        double s;
+        for (int i = 0; i < weights.size(); i++) {
+            alpha1_t *= alpha1;
+            alpha2_t *= alpha2;
+            for (int j = 0; j < weights[0].size(); j++) {
+                double gx = batchGradientX[i][j];
+                /* momentum */
+                vx[i][j] = alpha1 * vx[i][j] + (1 - alpha1) * gx;
+                /* delcay factor */
+                sx[i][j] = alpha2 * sx[i][j] + (1 - alpha2) * gx * gx;
+                v = vx[i][j] / (1 - alpha1_t);
+                s = sx[i][j] / (1 - alpha2_t);
+                weights[i][j] -= learningRate * v / (sqrt(s) + delta);
+                batchGradientX[i][j] = 0;
+            }
+            double gb = batchGradient[i];
+            vb[i] = alpha1 * vb[i] + (1 - alpha1) * gb;
+            sb[i] = alpha2 * sb[i] + (1 - alpha2) * gb * gb;
+            v = vb[i] / (1 - alpha1_t);
+            s = sb[i] / (1 - alpha2_t);
+            bias[i] -= learningRate * v / (sqrt(s) + delta);
+            batchGradient[i] = 0;
+        }
+        return;
+    }
+
+    double Layer::softmaxSum(std::vector<double> &z)
+    {
+        double s = 0;
+        for (int i = 0; i < z.size(); i++) {
+            s += exp(z[i]);
+        }
+        return s;
+    }
+
+    double Layer::softmax(double s, double z)
+    {
+        return exp(z) / s;
+    }
+
+    void BPNet::createNet(int inputDim, int hiddenDim, int hiddenLayerNum, int outputDim, int activateMethod)
     {
         Layer layer1; 
         layer1.createLayer(inputDim, hiddenDim, activateMethod);
@@ -187,7 +263,6 @@ namespace ML {
         Layer outputLayer; 
         outputLayer.createLayer(hiddenDim, outputDim, activateMethod);
         layers.push_back(outputLayer);
-        this->learningRate = learningRate;
         this->outputIndex = layers.size() - 1;
         return;
     }
@@ -200,9 +275,9 @@ namespace ML {
         for (int i = 0; i < layers.size(); i++) {
             for (int j = 0; j < layers[i].weights.size(); j++) {
                 for (int k = 0; k < layers[i].weights[j].size(); k++) {
-                    layers[i].weights[j][k] = dstNet.layers[i].weights[j][k];
+                    dstNet.layers[i].weights[j][k] = layers[i].weights[j][k];
                 }
-                layers[i].bias[j] = dstNet.layers[i].bias[j];
+                dstNet.layers[i].bias[j] = layers[i].bias[j];
             }
         }
         return;
@@ -265,7 +340,7 @@ namespace ML {
         return;
     }
 
-    void BPNet::updateWithBatchGradient()
+    void BPNet::BGD(double learningRate)
     {
         /* gradient descent */
         for (int i = 0; i < layers.size(); i++) {
@@ -274,36 +349,27 @@ namespace ML {
         return;
     }
 
-    void BPNet::BGD(std::vector<std::vector<double> >& x,
-            std::vector<std::vector<double> >& yo,
-            std::vector<std::vector<double> >& yt)
+    void BPNet::RMSProp(double rho, double learningRate)
     {
-        for (int i = 0; i < x.size(); i++) {
-            calculateBatchGradient(x[i], yo[i], yt[i]);
+        for (int i = 0; i < layers.size(); i++) {
+            layers[i].RMSProp(rho, learningRate);
         }
-        updateWithBatchGradient();
         return;
     }
 
-    void BPNet::BGD(std::vector<std::vector<double> >& x,
-            std::vector<std::vector<double> >& y)
+    void BPNet::Adam(double alpha1, double alpha2, double learningRate)
     {
-        for (int i = 0; i < x.size(); i++) {
-            calculateBatchGradient(x[i], y[i]);
+        for (int i = 0; i < layers.size(); i++) {
+            layers[i].Adam(alpha1, alpha2, learningRate);
         }
-        /* gradient descent */
-        updateWithBatchGradient();
         return;
     }
 
-    void BPNet::SGD(std::vector<double> &x, std::vector<double> &yo, std::vector<double> &yt)
+    void BPNet::SGD(std::vector<double> &x, std::vector<double> &y, double learningRate)
     {
-        if (yo.size() != yt.size()) {
-            return;
-        }
         feedForward(x);
         /* calculate final error */
-        backPropagate(yo, yt);
+        backPropagate(layers[outputIndex].outputs, y);
         /* gradient descent */
         for (int j = 0; j < layers.size(); j++) {
             if (j == 0) {
@@ -315,9 +381,11 @@ namespace ML {
         return;
     }
 
-
     void BPNet::train(std::vector<std::vector<double> >& x,
             std::vector<std::vector<double> >& y,
+            int optimizeMethod,
+            int batchSize,
+            double learningRate,
             int iterateNum)
     {
         if (x.empty() || y.empty()) {
@@ -336,9 +404,26 @@ namespace ML {
             std::cout<<"y != output"<<std::endl;
             return;
         }
+        int len = x.size();
         for (int i = 0; i < iterateNum; i++) {
-            int k = rand() % y.size();
-            SGD(x[k], layers[outputIndex].outputs, y[k]);
+            for (int j = 0; j < batchSize; j++) {
+                int k = rand() % len;
+                calculateBatchGradient(x[k], y[k]);
+            }
+            switch (optimizeMethod) {
+                case OPT_BGD:
+                    BGD(learningRate);
+                    break;
+                case OPT_RMSPROP:
+                    RMSProp(0.9, learningRate);
+                    break;
+                case OPT_ADAM:
+                    Adam(0.9, 0.99, learningRate);
+                    break;
+                default:
+                    Adam(0.9, 0.99, learningRate);
+                    break;
+            }
         }
         return;
     }

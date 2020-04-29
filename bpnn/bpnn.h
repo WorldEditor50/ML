@@ -8,22 +8,38 @@
 #include <ctime>
 #include <cstdlib>
 namespace ML {
-#define SIGMOID 0
-#define TANH    1
-#define RELU    2
+/* activate method */
+#define ACTIVATE_SIGMOID 0
+#define ACTIVATE_TANH    1
+#define ACTIVATE_RELU    2
+#define ACTIVATE_SOFTMAX 3
+#define ACTIVATE_LINEAR  4
+/* optimize method */
+#define OPT_BGD     0
+#define OPT_RMSPROP 1
+#define OPT_ADAM    2
     class Layer {
         public:
             Layer(){}
             ~Layer(){}
             void createLayer(int inputDim, int layerDim, int activateMethod);
-            double activate(double x);
-            double derivativeActivate(double y);
+            void createSoftmaxLayer(int inputDim, int layerDim, int activateMethod);
             void calculateOutputs(std::vector<double>& x);
             void calculateErrors(std::vector<double>& nextErrors, std::vector<std::vector<double> >& nextWeights);
-            void SGD(std::vector<double>& x, double learningRate);
             void calculateBatchGradient(std::vector<double>& x);
+            void SGD(std::vector<double>& x, double learningRate);
             void BGD(double learningRate);
-            void RMSProp();
+            void RMSProp(double rho, double learningRate);
+            void Adam(double alpha1, double alpha2, double learningRate);
+            std::vector<std::vector<double> > weights;
+            std::vector<double> bias;
+            std::vector<double> outputs;
+            std::vector<double> errors;
+        private:
+            double activate(double x);
+            double derivativeActivate(double y);
+            double softmaxSum(std::vector<double>& z);
+            double softmax(double s, double z);
             double sigmoid(double x);
             double dsigmoid(double y);
             double dtanh(double y);
@@ -31,47 +47,41 @@ namespace ML {
             double drelu(double x);
             double dotProduct(std::vector<double>& x1, std::vector<double>& x2);
             int activateMethod;
-            std::vector<double> outputs;
-            std::vector<double> errors;
-            std::vector<std::vector<double> > weights;
-            std::vector<double> bias;
             std::vector<std::vector<double> > batchGradientX;
             std::vector<double> batchGradient;
+            std::vector<std::vector<double> > sx;
+            std::vector<double> sb;
+            std::vector<std::vector<double> > vx;
+            std::vector<double> vb;
+            double alpha1_t;
+            double alpha2_t;
+            double delta;
     };
 
     class BPNet {
         public:
             BPNet(){}
             ~BPNet(){}
-            void createNet(int inputDim, int hiddenDim, int hiddenLayerNum, int outputDim,
-                    int activateMethod, double learningRate);
+            void createNet(int inputDim, int hiddenDim, int hiddenLayerNum, int outputDim, int activateMethod);
             void copyTo(BPNet& dstNet);
             std::vector<double>& getOutput();
             void feedForward(std::vector<double>& xi);
-            void backPropagate(std::vector<double>& yo,
-                    std::vector<double>& yt);
-            void SGD(std::vector<double> &x,
-                    std::vector<double> &yo,
-                    std::vector<double> &yt);
-            void calculateBatchGradient(std::vector<double> &x,
-                    std::vector<double> &yo,
-                    std::vector<double> &yt);
-            void calculateBatchGradient(std::vector<double> &x,
-                    std::vector<double> &y);
-            void updateWithBatchGradient();
-            void BGD(std::vector<std::vector<double> >& x,
-                    std::vector<std::vector<double> >& yo,
-                    std::vector<std::vector<double> >& yt);
-            void BGD(std::vector<std::vector<double> >& x,
-                    std::vector<std::vector<double> >& y);
-            void RMSProp();
+            void backPropagate(std::vector<double>& yo, std::vector<double>& yt);
+            void calculateBatchGradient(std::vector<double> &x, std::vector<double> &yo, std::vector<double> &yt);
+            void calculateBatchGradient(std::vector<double> &x, std::vector<double> &y);
+            void SGD(std::vector<double> &x, std::vector<double> &y, double learningRate);
+            void BGD(double learningRate = 0.001);
+            void RMSProp(double rho = 0.9, double learningRate = 0.001);
+            void Adam(double alpha1 = 0.9, double alpha2 = 0.99, double learningRate = 0.001);
             void train(std::vector<std::vector<double> >& x,
                     std::vector<std::vector<double> >& y,
+                    int optimizeMethod,
+                    int batchSize,
+                    double learningRate,
                     int iterateNum);
             void show();
             void loadParameter(const std::string& fileName);
             void saveParameter(const std::string& fileName);
-            double learningRate;
             int outputIndex;
             std::vector<Layer> layers;
     };
