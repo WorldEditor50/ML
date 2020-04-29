@@ -12,7 +12,7 @@ void test_bpnn(vector<vector<double> >& x)
 {
     cout<<"bpnn:"<<endl;
     BPNet bp;
-    bp.createNet(2, 4, 1, 1, SIGMOID, 0.3);
+    bp.createNet(2, 4, 1, 1, ACTIVATE_SIGMOID);
     vector<vector<double> > y(4);
     for (int i = 0; i < 4; i++) {
         y[i].resize(1);
@@ -21,10 +21,7 @@ void test_bpnn(vector<vector<double> >& x)
     y[1][0] = 1;
     y[2][0] = 1;
     y[3][0] = 0;
-    //bp.train(x, y, 10000);
-    for (int i = 0; i < 10000; i++) {
-        bp.BGD(x, y);
-    }
+    bp.train(x, y, OPT_ADAM, 4, 0.01, 10000);
     vector<double>& yi = bp.getOutput();
     for (int i = 0; i < 4; i++) {
         bp.feedForward(x[i]);
