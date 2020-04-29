@@ -22,7 +22,7 @@ namespace ML {
             DQNet(){}
             ~DQNet(){}
             void createNet(int stateDim, int hiddenDim, int hiddenLayerNum, int actionDim,
-                    int maxMemorySize, int replaceTargetIter, int batchSize, double learningRate);
+                    int maxMemorySize = 65532, int replaceTargetIter = 256, int batchSize = 32);
             void perceive(std::vector<double>& state,
                     std::vector<double>& action,
                     std::vector<double>& nextState,
@@ -33,18 +33,16 @@ namespace ML {
             int action(std::vector<double>& state);
             int maxQ(std::vector<double>& q_value);
             void experienceReplay(Transition& x);
-            void learn();
-            void onlineLearning(std::vector<Transition>& x);
+            void learn(double learningRate, double minExploringRate);
+            void onlineLearning(std::vector<Transition>& x, double learningRate, double minExploringRate);
             void save(const std::string& fileName);
             void load(const std::string& fileName);
             int stateDim;
             int actionDim;
             double gamma;
-            double epsilonMax;
-            double epsilon;
+            double exploringRate;
             int maxMemorySize;
             int batchSize;
-            double learningRate;
             int learningSteps;
             int replaceTargetIter;
             BPNet QMainNet;

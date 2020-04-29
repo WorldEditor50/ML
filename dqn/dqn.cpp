@@ -1,23 +1,21 @@
 #include "dqn.h"
 namespace ML {
     void DQNet::createNet(int stateDim, int hiddenDim, int hiddenLayerNum, int actionDim,
-            int maxMemorySize, int replaceTargetIter, int batchSize, double learningRate)
+            int maxMemorySize, int replaceTargetIter, int batchSize)
     {
         if (stateDim < 1 || hiddenDim < 1 || hiddenLayerNum < 1 || actionDim < 1 ||
-                maxMemorySize < 1 || replaceTargetIter < 1 || batchSize < 1 || learningRate < 0) {
+                maxMemorySize < 1 || replaceTargetIter < 1 || batchSize < 1) {
             return;
         }
         this->gamma = 0.9;
-        this->epsilonMax = 0.9;
-        this->epsilon = 0;
+        this->exploringRate = 1;
         this->stateDim = stateDim;
         this->actionDim = actionDim;
-        this->learningRate = learningRate;
         this->maxMemorySize = maxMemorySize;
         this->replaceTargetIter = replaceTargetIter;
         this->batchSize = batchSize;
-        this->QMainNet.createNet(stateDim, hiddenDim, hiddenLayerNum, actionDim, RELU, learningRate);
-        this->QTargetNet.createNet(stateDim, hiddenDim, hiddenLayerNum, actionDim, RELU, learningRate);
+        this->QMainNet.createNet(stateDim, hiddenDim, hiddenLayerNum, actionDim, ACTIVATE_RELU);
+        this->QTargetNet.createNet(stateDim, hiddenDim, hiddenLayerNum, actionDim, ACTIVATE_RELU);
         this->QMainNet.copyTo(QTargetNet);
         return;
     }
@@ -58,14 +56,14 @@ namespace ML {
         }
         double p = double(rand() % 10000) / 10000;
         int index = 0;
-        if (p <= epsilon) {
-            index = action(state);
-        } else {
+        if (p <= exploringRate) {
             std::vector<double>& QMainNetOutput = QMainNet.getOutput();
             for (int i = 0; i < QMainNetOutput.size(); i++) {
                 QMainNetOutput[i] = double(rand() % 10000) / 10000;
             }
             index = maxQ(QMainNetOutput);
+        } else {
+            index = action(state);
         }
         return index;
     }
@@ -98,13 +96,13 @@ namespace ML {
         std::vector<double>& QTargetNetOutput = QTargetNet.getOutput();
         std::vector<double>& QMainNetOutput = QMainNet.getOutput();
         /* estimate q-target: Q-Regression */
-        QTargetNet.feedForward(x.nextState);
-        QMainNet.feedForward(x.nextState);
         qTarget = x.action;
+        QMainNet.feedForward(x.nextState);
         int index = maxQ(QMainNetOutput);
         if (x.done == true) {
             qTarget[index] = x.reward;
         } else {
+            QTargetNet.feedForward(x.nextState);
             qTarget[index] = x.reward + gamma * QTargetNetOutput[index];
         }
         /* train QMainNet */
@@ -112,7 +110,7 @@ namespace ML {
         return;
     }
 
-    void DQNet::learn()
+    void DQNet::learn(double learningRate, double minExploringRate)
     {
         if (memories.size() < batchSize) {
             return;
@@ -128,20 +126,22 @@ namespace ML {
             int k = rand() % memories.size();
             experienceReplay(memories[k]);
         }
-        QMainNet.updateWithBatchGradient();
-        /* update step */
-        if (epsilon < epsilonMax) {
-            epsilon += 0.0001;
-        }
+        QMainNet.Adam(0.9, 0.99, learningRate);
         /* reduce memory */
         if (memories.size() > maxMemorySize) {
             forget();
+        }
+        /* update step */
+        if (exploringRate > minExploringRate) {
+            exploringRate *= 0.99;
+        } else {
+            exploringRate = minExploringRate;
         }
         learningSteps++;
         return;
     }
 
-    void DQNet::onlineLearning(std::vector<Transition>& x)
+    void DQNet::onlineLearning(std::vector<Transition>& x, double learningRate, double minExploringRate)
     {
         if (learningSteps % replaceTargetIter == 0) {
             std::cout<<"update target net"<<std::endl;
@@ -153,10 +153,12 @@ namespace ML {
             int k = rand() % x.size();
             experienceReplay(x[k]);
         }
-        QMainNet.updateWithBatchGradient();
+        QMainNet.Adam(0.9, 0.99, learningRate);
         /* update step */
-        if (epsilon < epsilonMax) {
-            epsilon += 0.0001;
+        if (exploringRate > minExploringRate) {
+            exploringRate *= 0.99;
+        } else {
+            exploringRate = minExploringRate;
         }
         learningSteps++;
         return;
@@ -171,6 +173,7 @@ namespace ML {
     void DQNet::load(const std::string &fileName)
     {
         QMainNet.loadParameter(fileName);
+        QMainNet.copyTo(QTargetNet);
         return;
     }
 }
