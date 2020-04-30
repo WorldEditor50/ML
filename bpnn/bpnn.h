@@ -12,21 +12,24 @@ namespace ML {
 #define ACTIVATE_SIGMOID 0
 #define ACTIVATE_TANH    1
 #define ACTIVATE_RELU    2
-#define ACTIVATE_SOFTMAX 3
-#define ACTIVATE_LINEAR  4
+#define ACTIVATE_LINEAR  3
 /* optimize method */
 #define OPT_BGD     0
 #define OPT_RMSPROP 1
 #define OPT_ADAM    2
+/* layer type */
+#define LOSS_MSE            0
+#define LOSS_CROSS_ENTROPY  1
     class Layer {
         public:
             Layer(){}
             ~Layer(){}
-            void createLayer(int inputDim, int layerDim, int activateMethod);
-            void createSoftmaxLayer(int inputDim, int layerDim, int activateMethod);
+            void createLayer(int inputDim, int layerDim, int activateMethod, int lossTye = LOSS_MSE);
             void calculateOutputs(std::vector<double>& x);
+            void calculateLoss(std::vector<double>& yo, std::vector<double> yt);
             void calculateErrors(std::vector<double>& nextErrors, std::vector<std::vector<double> >& nextWeights);
             void calculateBatchGradient(std::vector<double>& x);
+            void calculateSoftmaxGradient(std::vector<double>& x, std::vector<double>& yo, std::vector<double> yt);
             void SGD(std::vector<double>& x, double learningRate);
             void BGD(double learningRate);
             void RMSProp(double rho, double learningRate);
@@ -35,11 +38,11 @@ namespace ML {
             std::vector<double> bias;
             std::vector<double> outputs;
             std::vector<double> errors;
+            int lossType;
         private:
+            void softmax(std::vector<double>& x);
             double activate(double x);
             double derivativeActivate(double y);
-            double softmaxSum(std::vector<double>& z);
-            double softmax(double s, double z);
             double sigmoid(double x);
             double dsigmoid(double y);
             double dtanh(double y);
@@ -56,6 +59,7 @@ namespace ML {
             double alpha1_t;
             double alpha2_t;
             double delta;
+            double decay;
     };
 
     class BPNet {
@@ -63,6 +67,7 @@ namespace ML {
             BPNet(){}
             ~BPNet(){}
             void createNet(int inputDim, int hiddenDim, int hiddenLayerNum, int outputDim, int activateMethod);
+            void createNetWithSoftmax(int inputDim, int hiddenDim, int hiddenLayerNum, int outputDim, int activateMethod);
             void copyTo(BPNet& dstNet);
             std::vector<double>& getOutput();
             void feedForward(std::vector<double>& xi);

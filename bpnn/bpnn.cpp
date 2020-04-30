@@ -25,6 +25,24 @@ namespace ML {
         return x > 0 ? 1 : 0;
     }
 
+    void Layer::softmax(std::vector<double>& x)
+    {
+        double s = 0;
+        double maxValue = x[0];
+        for (int i = 0; i < x.size(); i++) {
+            if (x[i] > maxValue) {
+                maxValue = x[i];
+            }
+        }
+        for (int i = 0; i < x.size(); i++) {
+            s += exp(x[i] - maxValue);
+        }
+        for (int i = 0; i < x.size(); i++) {
+            outputs[i] = exp(x[i] - maxValue) / s;
+        }
+        return;
+    }
+
     double Layer::activate(double x)
     {
         double y = 0;
@@ -37,6 +55,9 @@ namespace ML {
                 break;
             case ACTIVATE_TANH:
                 y = tanh(x);
+                break;
+            case ACTIVATE_LINEAR:
+                y = x;
                 break;
             default:
                 y = sigmoid(x);
@@ -56,7 +77,10 @@ namespace ML {
                 dy = drelu(y);
                 break;
             case ACTIVATE_TANH:
-                y = dtanh(y);
+                dy = dtanh(y);
+                break;
+            case ACTIVATE_LINEAR:
+                dy = 1;
                 break;
             default:
                 dy = dsigmoid(y);
@@ -74,11 +98,12 @@ namespace ML {
         return sum;
     }
 
-    void Layer::createLayer(int inputDim, int layerDim, int activateMethod)
+    void Layer::createLayer(int inputDim, int layerDim, int activateMethod, int lossType)
     {
         if (layerDim < 1 || inputDim < 1) {
             return;
         }
+        this->lossType = lossType;
         this->activateMethod = activateMethod;
         outputs.resize(layerDim);
         errors.resize(layerDim);
@@ -94,6 +119,7 @@ namespace ML {
         this->alpha1_t = 1;
         this->alpha2_t = 1;
         this->delta = pow(10, -8);
+        this->decay = 0;
         /* init weights */
         for (int i = 0; i < weights.size(); i++) {
             weights[i].resize(inputDim);
@@ -111,12 +137,6 @@ namespace ML {
         return;
     }
 
-    void Layer::createSoftmaxLayer(int inputDim, int layerDim, int activateMethod)
-    {
-
-        return;
-    }
-
     void Layer::calculateOutputs(std::vector<double>& x)
     {
         if (x.size() != weights[0].size()) {
@@ -127,6 +147,9 @@ namespace ML {
         for (int i = 0; i < weights.size(); i++) {
             y = dotProduct(weights[i], x) + bias[i];
             outputs[i] = activate(y);
+        }
+        if (lossType == LOSS_CROSS_ENTROPY) {
+            softmax(outputs);
         }
         return;
     }
@@ -144,30 +167,22 @@ namespace ML {
         return;
     }
 
-    void Layer::SGD(std::vector<double>& x, double learningRate)
+    void Layer::calculateLoss(std::vector<double>& yo, std::vector<double> yt)
     {
-        /*
-         * e = (Activate(wx + b) - T)^2/2
-         * de/dw = (Activate(wx +b) - T)*DActivate(wx + b) * x
-         * de/db = (Activate(wx +b) - T)*DActivate(wx + b)
-         * */
-        double dOutput = 1;
-        for (int i = 0; i < weights.size(); i++) {
-            dOutput = derivativeActivate(outputs[i]);
-            for (int j = 0; j < weights[0].size(); j++) {
-                weights[i][j] -= learningRate * errors[i] * dOutput * x[j];
+        for (int i = 0; i < yo.size(); i++) {
+            if (lossType == LOSS_CROSS_ENTROPY) {
+                errors[i] = -yt[i] * log(yo[i]);
+            } else if (lossType == LOSS_MSE){
+                errors[i] = yo[i] - yt[i];
             }
-            bias[i] -= learningRate * errors[i] * dOutput;
-            errors[i] = 0;
         }
         return;
     }
 
     void Layer::calculateBatchGradient(std::vector<double>& x)
     {
-        double dOutput = 1;
         for (int i = 0; i < batchGradientX.size(); i++) {
-            dOutput = derivativeActivate(outputs[i]);
+            double dOutput = derivativeActivate(outputs[i]);
             for (int j = 0; j < batchGradientX[0].size(); j++) {
                 batchGradientX[i][j] += errors[i] * dOutput * x[j]; 
             }
@@ -177,14 +192,49 @@ namespace ML {
         return;
     }
 
+    void Layer::calculateSoftmaxGradient(std::vector<double>& x, std::vector<double>& yo, std::vector<double> yt)
+    {
+        for (int i = 0; i < batchGradientX.size(); i++) {
+            double dOutput = yo[i] - yt[i];
+            for (int j = 0; j < batchGradientX[0].size(); j++) {
+                batchGradientX[i][j] += dOutput * x[j];
+            }
+            batchGradient[i] += dOutput;
+            errors[i] = 0;
+        }
+        return;
+    }
+
+    void Layer::SGD(std::vector<double>& x, double learningRate)
+    {
+        /*
+         * e = (Activate(wx + b) - T)^2/2
+         * de/dw = (Activate(wx +b) - T)*DActivate(wx + b) * x
+         * de/db = (Activate(wx +b) - T)*DActivate(wx + b)
+         * */
+        if (lossType != LOSS_MSE) {
+            return;
+        }
+        double dOutput = 1;
+        for (int i = 0; i < weights.size(); i++) {
+            dOutput = derivativeActivate(outputs[i]);
+            for (int j = 0; j < weights[0].size(); j++) {
+                weights[i][j] += decay * weights[i][j] - learningRate * errors[i] * dOutput * x[j];
+            }
+            bias[i] += decay * bias[i] - learningRate * errors[i] * dOutput;
+            errors[i] = 0;
+        }
+        return;
+    }
+
     void Layer::BGD(double learningRate)
     {
         for (int i = 0; i < weights.size(); i++) {
             for (int j = 0; j < weights[0].size(); j++) {
-                weights[i][j] -= learningRate * batchGradientX[i][j];
+                weights[i][j] += decay * weights[i][j] - learningRate * batchGradientX[i][j];
                 batchGradientX[i][j] = 0;
             }
-            bias[i] -= learningRate * batchGradient[i];
+            bias[i] += decay * bias[i] - learningRate * batchGradient[i];
             batchGradient[i] = 0;
         }
         return;
@@ -196,12 +246,12 @@ namespace ML {
             for (int j = 0; j < weights[0].size(); j++) {
                 double gx = batchGradientX[i][j];
                 sx[i][j] = rho * sx[i][j] + (1 - rho) * gx * gx;
-                weights[i][j] -= learningRate * gx / (sqrt(sx[i][j]) + delta);
+                weights[i][j] += decay * weights[i][j] - learningRate * gx / (sqrt(sx[i][j]) + delta);
                 batchGradientX[i][j] = 0;
             }
             double gb = batchGradient[i];
             sb[i] = rho * sb[i] + (1 - rho) * gb * gb;
-            bias[i] -= learningRate * gb / (sqrt(sb[i]) + delta);
+            bias[i] += decay * bias[i] - learningRate * gb / (sqrt(sb[i]) + delta);
             batchGradient[i] = 0;
         }
         return;
@@ -222,7 +272,7 @@ namespace ML {
                 sx[i][j] = alpha2 * sx[i][j] + (1 - alpha2) * gx * gx;
                 v = vx[i][j] / (1 - alpha1_t);
                 s = sx[i][j] / (1 - alpha2_t);
-                weights[i][j] -= learningRate * v / (sqrt(s) + delta);
+                weights[i][j] += decay * weights[i][j] - learningRate * v / (sqrt(s) + delta);
                 batchGradientX[i][j] = 0;
             }
             double gb = batchGradient[i];
@@ -230,39 +280,42 @@ namespace ML {
             sb[i] = alpha2 * sb[i] + (1 - alpha2) * gb * gb;
             v = vb[i] / (1 - alpha1_t);
             s = sb[i] / (1 - alpha2_t);
-            bias[i] -= learningRate * v / (sqrt(s) + delta);
+            bias[i] += decay * bias[i] - learningRate * v / (sqrt(s) + delta);
             batchGradient[i] = 0;
         }
         return;
     }
 
-    double Layer::softmaxSum(std::vector<double> &z)
-    {
-        double s = 0;
-        for (int i = 0; i < z.size(); i++) {
-            s += exp(z[i]);
-        }
-        return s;
-    }
-
-    double Layer::softmax(double s, double z)
-    {
-        return exp(z) / s;
-    }
-
     void BPNet::createNet(int inputDim, int hiddenDim, int hiddenLayerNum, int outputDim, int activateMethod)
     {
-        Layer layer1; 
-        layer1.createLayer(inputDim, hiddenDim, activateMethod);
-        layers.push_back(layer1);
+        Layer inputLayer; 
+        inputLayer.createLayer(inputDim, hiddenDim, activateMethod);
+        layers.push_back(inputLayer);
         for (int i = 1; i < hiddenLayerNum; i++) {
-            Layer layer;
-            layer.createLayer(hiddenDim, hiddenDim, activateMethod);
-            layers.push_back(layer);
+            Layer hiddenLayer;
+            hiddenLayer.createLayer(hiddenDim, hiddenDim, activateMethod);
+            layers.push_back(hiddenLayer);
         }
         Layer outputLayer; 
         outputLayer.createLayer(hiddenDim, outputDim, activateMethod);
         layers.push_back(outputLayer);
+        this->outputIndex = layers.size() - 1;
+        return;
+    }
+
+    void BPNet::createNetWithSoftmax(int inputDim, int hiddenDim, int hiddenLayerNum, int outputDim, int activateMethod)
+    {
+        Layer inputLayer; 
+        inputLayer.createLayer(inputDim, hiddenDim, activateMethod);
+        layers.push_back(inputLayer);
+        for (int i = 1; i < hiddenLayerNum; i++) {
+            Layer hiddenLayer;
+            hiddenLayer.createLayer(hiddenDim, hiddenDim, activateMethod);
+            layers.push_back(hiddenLayer);
+        }
+        Layer softmaxLayer; 
+        softmaxLayer.createLayer(hiddenDim, outputDim, ACTIVATE_LINEAR, LOSS_CROSS_ENTROPY);
+        layers.push_back(softmaxLayer);
         this->outputIndex = layers.size() - 1;
         return;
     }
@@ -300,10 +353,8 @@ namespace ML {
 
     void BPNet::backPropagate(std::vector<double>& yo, std::vector<double>& yt)
     {
-        /* calculate final error */
-        for (int i = 0; i < yo.size(); i++) {
-            layers[outputIndex].errors[i] = yo[i] - yt[i]; 
-        }
+        /* calculate loss */
+        layers[outputIndex].calculateLoss(yo, yt);
         /* error backpropagate */
         for (int i = outputIndex - 1; i >= 0; i--) {
             layers[i].calculateErrors(layers[i + 1].errors, layers[i + 1].weights);
@@ -315,9 +366,10 @@ namespace ML {
     {
         backPropagate(yo, yt);
         /* calculate batch gradient */
-        for (int j = 0; j < layers.size(); j++) {
-            if (j == 0) {
-                layers[j].calculateBatchGradient(x);
+        layers[0].calculateBatchGradient(x);
+        for (int j = 1; j < layers.size(); j++) {
+            if (layers[j].lossType == LOSS_CROSS_ENTROPY) {
+                layers[j].calculateSoftmaxGradient(layers[j - 1].outputs, yo, yt);
             } else {
                 layers[j].calculateBatchGradient(layers[j - 1].outputs);
             }
@@ -330,9 +382,10 @@ namespace ML {
         feedForward(x);
         backPropagate(layers[outputIndex].outputs, y);
         /* calculate batch gradient */
-        for (int j = 0; j < layers.size(); j++) {
-            if (j == 0) {
-                layers[j].calculateBatchGradient(x);
+        layers[0].calculateBatchGradient(x);
+        for (int j = 1; j < layers.size(); j++) {
+            if (layers[j].lossType == LOSS_CROSS_ENTROPY) {
+                layers[j].calculateSoftmaxGradient(layers[j - 1].outputs, layers[outputIndex].outputs, y);
             } else {
                 layers[j].calculateBatchGradient(layers[j - 1].outputs);
             }
@@ -430,7 +483,6 @@ namespace ML {
 
     void BPNet::show()
     {
-        std::cout<<"outputs:"<<std::endl;;
         for (int i = 0; i < layers[outputIndex].outputs.size(); i++) {
             std::cout<<layers[outputIndex].outputs[i]<<" ";
         }
