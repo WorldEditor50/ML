@@ -7,3 +7,4 @@
 - perceptron
 - svm
 - dqn
+- policy gradient

@@ -26,6 +26,7 @@ namespace ML {
             ~Layer(){}
             void createLayer(int inputDim, int layerDim, int activateMethod, int lossTye = LOSS_MSE);
             void calculateOutputs(std::vector<double>& x);
+            void softmax(std::vector<double>& x);
             void calculateLoss(std::vector<double>& yo, std::vector<double> yt);
             void calculateErrors(std::vector<double>& nextErrors, std::vector<std::vector<double> >& nextWeights);
             void calculateBatchGradient(std::vector<double>& x);
@@ -40,7 +41,6 @@ namespace ML {
             std::vector<double> errors;
             int lossType;
         private:
-            void softmax(std::vector<double>& x);
             double activate(double x);
             double derivativeActivate(double y);
             double sigmoid(double x);
@@ -69,21 +69,25 @@ namespace ML {
             void createNet(int inputDim, int hiddenDim, int hiddenLayerNum, int outputDim, int activateMethod);
             void createNetWithSoftmax(int inputDim, int hiddenDim, int hiddenLayerNum, int outputDim, int activateMethod);
             void copyTo(BPNet& dstNet);
+            void softUpdateTo(BPNet& dstNet, double alpha);
             std::vector<double>& getOutput();
             void feedForward(std::vector<double>& xi);
             void backPropagate(std::vector<double>& yo, std::vector<double>& yt);
+            void backPropagate(std::vector<double>& loss);
             void calculateBatchGradient(std::vector<double> &x, std::vector<double> &yo, std::vector<double> &yt);
             void calculateBatchGradient(std::vector<double> &x, std::vector<double> &y);
             void SGD(std::vector<double> &x, std::vector<double> &y, double learningRate);
             void BGD(double learningRate = 0.001);
             void RMSProp(double rho = 0.9, double learningRate = 0.001);
             void Adam(double alpha1 = 0.9, double alpha2 = 0.99, double learningRate = 0.001);
+            void optimize(int optType = OPT_RMSPROP, double learningRate = 0.001);
             void train(std::vector<std::vector<double> >& x,
                     std::vector<std::vector<double> >& y,
                     int optimizeMethod,
                     int batchSize,
                     double learningRate,
                     int iterateNum);
+            int maxOutput();
             void show();
             void loadParameter(const std::string& fileName);
             void saveParameter(const std::string& fileName);
