@@ -11,7 +11,7 @@ namespace ML {
         this->stateDim = stateDim;
         this->actionDim = actionDim;
         this->learningRate = learningRate;
-        this->policyNet.createNetWithSoftmax(stateDim, hiddenDim, hiddenLayerNum, actionDim, ACTIVATE_SIGMOID);
+        this->policyNet.createNet(stateDim, hiddenDim, hiddenLayerNum, actionDim, ACTIVATE_SIGMOID, LOSS_CROSS_ENTROPY);
         return;
     }
 
@@ -90,7 +90,7 @@ namespace ML {
             for (int j = 0; j < actionDim; j++) {
                 x[i].action[j] *= r;
             }
-            policyNet.calculateBatchGradient(x[i].state, x[i].action);
+            policyNet.calculateGradient(x[i].state, x[i].action);
         }
         policyNet.RMSProp(0.9, learningRate);
         exploringRate *= 0.99;
@@ -100,13 +100,13 @@ namespace ML {
 
     void DPGNet::save(const std::string &fileName)
     {
-        policyNet.saveParameter(fileName);
+        policyNet.save(fileName);
         return;
     }
 
     void DPGNet::load(const std::string &fileName)
     {
-        policyNet.loadParameter(fileName);
+        policyNet.load(fileName);
         return;
     }
 }

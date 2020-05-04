@@ -106,7 +106,7 @@ namespace ML {
             qTarget[i] = x.reward + gamma * QTargetNetOutput[k];
         }
         /* train QMainNet */
-        QMainNet.calculateBatchGradient(x.state, qTarget);
+        QMainNet.calculateGradient(x.state, qTarget);
         return;
     }
 
@@ -160,13 +160,13 @@ namespace ML {
 
     void DQNet::save(const std::string &fileName)
     {
-        QMainNet.saveParameter(fileName);
+        QMainNet.save(fileName);
         return;
     }
 
     void DQNet::load(const std::string &fileName)
     {
-        QMainNet.loadParameter(fileName);
+        QMainNet.load(fileName);
         QMainNet.copyTo(QTargetNet);
         return;
     }
