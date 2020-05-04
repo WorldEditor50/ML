@@ -516,7 +516,7 @@ namespace ML {
                     file << layers[i].W[j][k];
                 }
                 file << layers[i].B[j];
-                file << std::endl;;
+                file << std::endl;
             }
         }
         return;
