@@ -10,30 +10,6 @@ namespace ML {
         return sum;
     }
             
-    void Layer::multiply(std::vector<std::vector<double> >& x1,
-                    std::vector<std::vector<double> >& x2,
-                    std::vector<std::vector<double> >& y)
-    {
-        if (x1[0].size() != x2.size()) {
-            return;
-        }
-        if (y[0].size() != x1[0].size() || y.size() != x2.size()) {
-            return;
-        }
-        /* (m, p) x (p, n) = (m, n) */
-        int m = x1[0].size();
-        int p = x2[0].size();
-        int n = x2.size();
-        for (int i = 0; i < m; i++) {
-            for (int j = 0; j < n; j++) {
-                for (int k = 0; k < p; k++) {
-                    y[i][j] += x1[i][k] * x2[k][j];
-                }
-            }
-        }
-        return;
-    }
-
     void Layer::softmax(std::vector<double>& x, std::vector<double>& y)
     {
         double s = 0;
@@ -321,13 +297,13 @@ namespace ML {
         return;
     }
 
-    void BPNet::feedForward(std::vector<double>& xi)
+    int BPNet::feedForward(std::vector<double>& x)
     {
-        layers[0].feedForward(xi);
+        layers[0].feedForward(x);
         for (int i = 1; i < layers.size(); i++) {
             layers[i].feedForward(layers[i - 1].O);
         }
-        return;
+        return argmax();
     }
 
     std::vector<double>& BPNet::getOutput()
@@ -469,7 +445,7 @@ namespace ML {
         return;
     }
 
-    int BPNet::maxOutput()
+    int BPNet::argmax()
     {
         int index = 0;
         double maxValue = layers[outputIndex].O[0];

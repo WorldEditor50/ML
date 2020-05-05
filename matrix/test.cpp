@@ -175,7 +175,7 @@ void test_transpose()
     M1.random(9);
     M1.show();
     Mat<int> M2;
-    M2 = M1.transpose();
+    M2 = M1.Tr();
     M2.show();
     return;
 }

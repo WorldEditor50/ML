@@ -39,13 +39,11 @@ namespace ML {
             std::vector<double> O;
             std::vector<double> E;
             int lossType;
+            int id;
         private:
             double activate(double x);
             double dActivate(double y);
             double dotProduct(std::vector<double>& x1, std::vector<double>& x2);
-            void multiply(std::vector<std::vector<double> >& x1,
-                    std::vector<std::vector<double> >& x2,
-                    std::vector<std::vector<double> >& y);
             int activateType;
             /* buffer for optimization */
             std::vector<std::vector<double> > dW;
@@ -69,7 +67,7 @@ namespace ML {
             void copyTo(BPNet& dstNet);
             void softUpdateTo(BPNet& dstNet, double alpha);
             std::vector<double>& getOutput();
-            void feedForward(std::vector<double>& xi);
+            int feedForward(std::vector<double>& x);
             void backPropagate(std::vector<double>& yo, std::vector<double>& yt);
             void backPropagate(std::vector<double>& loss);
             void calculateGradient(std::vector<double> &x, std::vector<double> &yo, std::vector<double> &yt);
@@ -84,7 +82,7 @@ namespace ML {
                     int batchSize,
                     double learningRate,
                     int iterateNum);
-            int maxOutput();
+            int argmax();
             void show();
             void load(const std::string& fileName);
             void save(const std::string& fileName);
