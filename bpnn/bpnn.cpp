@@ -74,34 +74,54 @@ namespace ML {
         return dy;
     }
 
+    Layer::Layer(int inputDim, int layerDim, int activateType, int lossTye)
+    {
+        createLayer(inputDim, layerDim, activateType, lossType); 
+    }
+
+    Layer::Layer(const Layer& layer)
+    {
+        if (this == &layer) {
+            return;
+        }
+        if (inputDim == 0 || layerDim == 0) {
+            createLayer(layer.inputDim, layer.layerDim, layer.activateType, layer.lossType); 
+        }
+        if (inputDim != layer.inputDim || layerDim != layer.layerDim) {
+            return;
+        }
+    }
+
     void Layer::createLayer(int inputDim, int layerDim, int activateType, int lossType)
     {
         if (layerDim < 1 || inputDim < 1) {
             return;
         }
+        this->inputDim = inputDim;
+        this->layerDim = layerDim;
         this->lossType = lossType;
         this->activateType = activateType;
-        W.resize(layerDim);
-        B.resize(layerDim);
-        O.resize(layerDim, 0);
-        E.resize(layerDim, 0);
+        W = std::vector<std::vector<double> >(layerDim);
+        B = std::vector<double>(layerDim);
+        O = std::vector<double>(layerDim);
+        E = std::vector<double>(layerDim);
         /* buffer for optimization */
-        dW.resize(layerDim);
-        dB.resize(layerDim);
-        Sw.resize(layerDim);
-        Sb.resize(layerDim, 0);
-        Vw.resize(layerDim);
-        Vb.resize(layerDim, 0);
+        dW = std::vector<std::vector<double> >(layerDim);
+        dB = std::vector<double>(layerDim);
+        Sw = std::vector<std::vector<double> >(layerDim);
+        Sb = std::vector<double>(layerDim);
+        Vw = std::vector<std::vector<double> >(layerDim);
+        Vb = std::vector<double>(layerDim);
         this->alpha1_t = 1;
         this->alpha2_t = 1;
         this->delta = pow(10, -8);
         this->decay = 0;
         /* init */
         for (int i = 0; i < W.size(); i++) {
-            W[i].resize(inputDim);
-            dW[i].resize(inputDim);
-            Sw[i].resize(inputDim, 0);
-            Vw[i].resize(inputDim, 0);
+            W[i] = std::vector<double>(inputDim);
+            dW[i] = std::vector<double>(inputDim);
+            Sw[i] = std::vector<double>(inputDim, 0);
+            Vw[i] = std::vector<double>(inputDim, 0);
         }
         /* init */
         for (int i = 0; i < W.size(); i++) {
@@ -109,6 +129,17 @@ namespace ML {
                 W[i][j] = double(rand() % 10000 - rand() % 10000) / 10000;
             }
             B[i] = double(rand() % 10000 - rand() % 10000) / 10000;
+        }
+        return;
+    }
+
+    void Layer::copyTo(Layer& dstLayer)
+    {
+        for (int i = 0; i < W.size(); i++) {
+            for (int j = 0; j < W[0].size(); j++) {
+                dstLayer.W[i][j] = W[i][j];
+            }
+            dstLayer.B[i] = B[i];
         }
         return;
     }
@@ -121,11 +152,23 @@ namespace ML {
         }
         double y = 0;
         for (int i = 0; i < W.size(); i++) {
-            y = dotProduct(W[i], x) + B[i];
-            O[i] = activate(y);
+            y = dotProduct(W[i], x);
+            O[i] = activate(y + B[i]);
         }
         if (lossType == LOSS_CROSS_ENTROPY) {
             softmax(O, O);
+        }
+        return;
+    }
+
+    void Layer::feedForward(std::vector<std::vector<double> >& x)
+    {
+        double y = 0;
+        for (int i = 0; i < W.size(); i++) {
+            for (int j = 0; j < x.size(); i++) {
+                y += dotProduct(W[i], x[j]);
+            }
+            O[i] = activate(y + B[i]);
         }
         return;
     }
@@ -241,24 +284,50 @@ namespace ML {
         return;
     }
 
+    BPNet::BPNet(int inputDim, int hiddenDim, int hiddenLayerNum, int outputDim,
+                    int activateType, int lossType)
+    {
+        createNet(inputDim, hiddenDim, hiddenLayerNum, outputDim, activateType, lossType);
+    }
+
+    BPNet::BPNet(const BPNet& bpNet)
+    {
+        if (this == &bpNet) {
+            return;
+        }
+        if (this->layers.size() == 0) {
+            createNet(bpNet.inputDim,
+                    bpNet.hiddenDim,
+                    bpNet.hiddenLayerNum,
+                    bpNet.outputDim,
+                    bpNet.activateType,
+                    bpNet.lossType);
+        }
+        if (this->layers.size() != bpNet.layers.size()) {
+            return;
+        }
+    }
+
     void BPNet::createNet(int inputDim, int hiddenDim, int hiddenLayerNum, int outputDim, int activateType, int lossType)
     {
-        Layer inputLayer;
-        inputLayer.createLayer(inputDim, hiddenDim, activateType);
+        this->inputDim = inputDim;
+        this->hiddenDim = hiddenDim;
+        this->hiddenLayerNum = hiddenLayerNum;
+        this->outputDim = outputDim;
+        this->lossType = lossType;
+        this->activateType = activateType;
+        Layer inputLayer(inputDim, hiddenDim, activateType);
         layers.push_back(inputLayer);
         for (int i = 1; i < hiddenLayerNum; i++) {
-            Layer hiddenLayer;
-            hiddenLayer.createLayer(hiddenDim, hiddenDim, activateType);
+            Layer hiddenLayer(hiddenDim, hiddenDim, activateType);
             layers.push_back(hiddenLayer);
         }
         if (lossType == LOSS_MSE) {
-            Layer outputLayer;
-            outputLayer.createLayer(hiddenDim, outputDim, activateType);
+            Layer outputLayer(hiddenDim, outputDim, activateType);
             layers.push_back(outputLayer);
         }
         if (lossType == LOSS_CROSS_ENTROPY) {
-            Layer softmaxLayer;
-            softmaxLayer.createLayer(hiddenDim, outputDim, ACTIVATE_LINEAR, LOSS_CROSS_ENTROPY);
+            Layer softmaxLayer(hiddenDim, outputDim, ACTIVATE_LINEAR, LOSS_CROSS_ENTROPY);
             layers.push_back(softmaxLayer);
         }
         this->outputIndex = layers.size() - 1;
@@ -271,12 +340,7 @@ namespace ML {
             return;
         }
         for (int i = 0; i < layers.size(); i++) {
-            for (int j = 0; j < layers[i].W.size(); j++) {
-                for (int k = 0; k < layers[i].W[j].size(); k++) {
-                    dstNet.layers[i].W[j][k] = layers[i].W[j][k];
-                }
-                dstNet.layers[i].B[j] = layers[i].B[j];
-            }
+            dstNet.layers[i].copyTo(layers[i]);
         }
         return;
     }

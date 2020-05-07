@@ -49,8 +49,14 @@ namespace ML {
                 Mat<T>& operator -= (T x);
                 Mat<T>& operator *= (T x);
                 Mat<T>& operator /= (T x);
+                /* statistics */
                 T max(std::vector<T>& x);
                 T min(std::vector<T>& x);
+                T max(Mat<T>& X);
+                T min(Mat<T>& X);
+                T sum(Mat<T>& X);
+                T mean(Mat<T>& X);
+                void cov();
                 T dotProduct(std::vector<T>& x1, std::vector<T>& x2);
                 Mat<T>& mappingTo(double (*func)(double x));
                 /* tranformation */
@@ -405,7 +411,11 @@ namespace ML {
             }
             for (int i = 0; i < rows; i++) {
                 for (int j = 0; j < cols; j++) {
-                    mat[i][j] /= X.mat[i][j];
+                    if (X.mat[i][j] == 0) {
+                        return *this;
+                    } else {
+                        mat[i][j] /= X.mat[i][j];
+                    }
                 }
             }
             return *this;
@@ -464,6 +474,9 @@ namespace ML {
     template<typename T>
         Mat<T> Mat<T>::operator / (T x)
         {
+            if (x == 0) {
+                return *this;
+            }
             Mat<T> Y(rows, cols);
             for (int i = 0; i < rows; i++) {
                 for (int j = 0; j < cols; j++) {
@@ -509,6 +522,9 @@ namespace ML {
     template<typename T>
         Mat<T>& Mat<T>::operator /= (T x)
         {
+            if (x == 0) {
+                return *this;
+            }
             for (int i = 0; i < rows; i++) {
                 for (int j = 0; j < cols; j++) {
                     mat[i][j] /= x;

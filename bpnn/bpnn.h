@@ -20,13 +20,20 @@ namespace ML {
 /* loss type */
 #define LOSS_MSE            0
 #define LOSS_CROSS_ENTROPY  1
+/* layer type */
+#define LAYER_INPUT  0
+#define LAYER_HIDDEN 1
+#define LAYER_OUTPUT 2
     class Layer {
         public:
-            Layer(){}
+            Layer():inputDim(0), layerDim(0){}
             ~Layer(){}
+            Layer(int inputDim, int layerDim, int activateType, int lossTye = LOSS_MSE);
+            Layer(const Layer& layer);
             void createLayer(int inputDim, int layerDim, int activateType, int lossTye = LOSS_MSE);
+            void copyTo(Layer& layer);
             void feedForward(std::vector<double>& x);
-            void softmax(std::vector<double>& x, std::vector<double>& y);
+            void feedForward(std::vector<std::vector<double> >& x);
             void calculateLoss(std::vector<double>& yo, std::vector<double> yt);
             void calculateErrors(std::vector<double>& nextE, std::vector<std::vector<double> >& nextW);
             void calculateGradient(std::vector<double>& x);
@@ -34,15 +41,19 @@ namespace ML {
             void SGD(double learningRate);
             void RMSProp(double rho, double learningRate);
             void Adam(double alpha1, double alpha2, double learningRate);
+            void call(Layer& preLayer, int method);
             std::vector<std::vector<double> > W;
             std::vector<double> B;
             std::vector<double> O;
             std::vector<double> E;
+            int inputDim;
+            int layerDim;
             int lossType;
-            int id;
+            int layerType;
         private:
             double activate(double x);
             double dActivate(double y);
+            void softmax(std::vector<double>& x, std::vector<double>& y);
             double dotProduct(std::vector<double>& x1, std::vector<double>& x2);
             int activateType;
             /* buffer for optimization */
@@ -62,6 +73,9 @@ namespace ML {
         public:
             BPNet(){}
             ~BPNet(){}
+            BPNet(int inputDim, int hiddenDim, int hiddenLayerNum, int outputDim,
+                    int activateType = ACTIVATE_SIGMOID, int lossType = LOSS_MSE);
+            BPNet(const BPNet& bpNet);
             void createNet(int inputDim, int hiddenDim, int hiddenLayerNum, int outputDim,
                     int activateType = ACTIVATE_SIGMOID, int lossType = LOSS_MSE);
             void copyTo(BPNet& dstNet);
@@ -86,6 +100,12 @@ namespace ML {
             void show();
             void load(const std::string& fileName);
             void save(const std::string& fileName);
+            int inputDim;
+            int hiddenDim;
+            int hiddenLayerNum;
+            int outputDim;
+            int lossType;
+            int activateType;
             int outputIndex;
             std::vector<Layer> layers;
     };
