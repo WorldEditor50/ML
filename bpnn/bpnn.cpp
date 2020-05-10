@@ -90,6 +90,12 @@ namespace ML {
         if (inputDim != layer.inputDim || layerDim != layer.layerDim) {
             return;
         }
+        for (int i = 0; i < W.size(); i++) {
+            for (int j = 0; j < W[0].size(); j++) {
+                W[i][j] = layer.W[i][j];
+            }
+            B[i] = layer.B[i];
+        }
     }
 
     void Layer::createLayer(int inputDim, int layerDim, int activateType, int lossType)
@@ -261,9 +267,9 @@ namespace ML {
     {
         double v;
         double s;
+        alpha1_t *= alpha1;
+        alpha2_t *= alpha2;
         for (int i = 0; i < W.size(); i++) {
-            alpha1_t *= alpha1;
-            alpha2_t *= alpha2;
             for (int j = 0; j < W[0].size(); j++) {
                 /* momentum */
                 Vw[i][j] = alpha1 * Vw[i][j] + (1 - alpha1) * dW[i][j];

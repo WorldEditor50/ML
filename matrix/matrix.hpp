@@ -52,10 +52,6 @@ namespace ML {
                 /* statistics */
                 T max(std::vector<T>& x);
                 T min(std::vector<T>& x);
-                T max(Mat<T>& X);
-                T min(Mat<T>& X);
-                T sum(Mat<T>& X);
-                T mean(Mat<T>& X);
                 void cov();
                 T dotProduct(std::vector<T>& x1, std::vector<T>& x2);
                 Mat<T>& mappingTo(double (*func)(double x));
@@ -83,6 +79,9 @@ namespace ML {
     template<typename T>
         Mat<T>::Mat(const Mat<T>& X)
         {
+            if (this == &X) {
+                return;
+            }
             createMat(X.rows, X.cols);
             copy(X);
         }
@@ -242,7 +241,7 @@ namespace ML {
         void Mat<T>::save(const std::string& fileName)
         {
             std::ofstream file;
-            file.open(fileName);
+            file.open(fileName, std::ofstream::app);
             for (int i = 0; i < rows; i++) {
                 for (int j = 0; j < cols; j++) {
                     file << mat[i][j]<<" ";
@@ -277,7 +276,7 @@ namespace ML {
                 this->createMat(X.rows, X.cols);
             }
             if (X.rows != rows || X.cols != cols) {
-                std::cout<<"size not equal"<<std::endl;
+                std::cout<<"mat = size not equal"<<std::endl;
                 return *this;
             }
             for (int i = 0; i < rows; i++) {
@@ -292,7 +291,7 @@ namespace ML {
         Mat<T> Mat<T>::operator + (const Mat<T>& X)
         {
             if ((rows != X.rows) || (cols != X.cols)) {
-                std::cout<<"size not equal"<<std::endl;
+                std::cout<<"mat + size not equal"<<std::endl;
                 return *this;
             }
             Mat<T> Y(rows, cols);
@@ -308,6 +307,7 @@ namespace ML {
         Mat<T> Mat<T>::operator - (const Mat<T>& X)
         {
             if (rows != X.rows || (cols != X.cols)) {
+                std::cout<<"mat - size not equal"<<std::endl;
                 return *this;
             }
             Mat<T> Y(rows, cols);
@@ -323,6 +323,7 @@ namespace ML {
         Mat<T> Mat<T>::operator * (const Mat<T>& X)
         {
             if (cols != X.rows) {
+                std::cout<<"mat * size not equal"<<std::endl;
                 return *this;
             }
             /* (m, p) x (p, n) = (m, n) */
@@ -344,12 +345,14 @@ namespace ML {
         Mat<T> Mat<T>::operator / (const Mat<T>& X)
         {
             if (rows != X.rows || (cols != X.cols)) {
+                std::cout<<"mat / size not equal"<<std::endl;
                 return *this;
             }
             Mat<T> Y(rows, cols);
             for (int i = 0; i < rows; i++) {
                 for (int j = 0; j < cols; j++) {
                     if (X.mat[i][j] == 0) {
+                        std::cout<<"mat / zero element"<<std::endl;
                         return *this;
                     } else {
                         Y.mat[i][j] = mat[i][j] / X.mat[i][j];
@@ -363,6 +366,7 @@ namespace ML {
         Mat<T> Mat<T>::operator % (const Mat<T>& X)
         {
             if (rows != X.rows || (cols != X.cols)) {
+                std::cout<<"mat % size not equal"<<std::endl;
                 Mat<T> nullMat;
                 return nullMat;
             }
@@ -379,6 +383,7 @@ namespace ML {
         Mat<T>& Mat<T>::operator += (const Mat<T>& X)
         {
             if (rows != X.rows || (cols != X.cols)) {
+                std::cout<<"mat += size not equal"<<std::endl;
                 return *this;
             }
             for (int i = 0; i < rows; i++) {
@@ -393,6 +398,7 @@ namespace ML {
         Mat<T>& Mat<T>::operator -= (const Mat<T>& X)
         {
             if (rows != X.rows || (cols != X.cols)) {
+                std::cout<<"mat -= size not equal"<<std::endl;
                 return *this;
             }
             for (int i = 0; i < rows; i++) {
@@ -407,6 +413,7 @@ namespace ML {
         Mat<T>& Mat<T>::operator /= (const Mat<T>& X)
         {
             if (rows != X.rows || (cols != X.cols)) {
+                std::cout<<"mat /= size not equal"<<std::endl;
                 return *this;
             }
             for (int i = 0; i < rows; i++) {
@@ -425,6 +432,7 @@ namespace ML {
         Mat<T>& Mat<T>::operator %= (const Mat<T>& X)
         {
             if (rows != X.rows || (cols != X.cols)) {
+                std::cout<<"mat %= size not equal"<<std::endl;
                 return *this;
             }
             for (int i = 0; i < rows; i++) {
@@ -556,6 +564,60 @@ namespace ML {
             }
             return minT;
         }
+    template<typename T>
+        T max(Mat<T>& X)
+        {
+            T maxT = X.mat[0][0];
+            for (int i = 0; i < X.rows; i++) {
+                for (int j = 0; j < X.cols; j++) {
+                    if (maxT < X.mat[i][j]) {
+                        maxT = X.mat[i][j];
+                    }
+                }
+            }
+            return maxT;
+        }
+
+    template<typename T>
+        T min(Mat<T>& X)
+        {
+            T minT = X.mat[0][0];
+            for (int i = 0; i < X.rows; i++) {
+                for (int j = 0; j < X.cols; j++) {
+                    if (minT > X.mat[i][j]) {
+                        minT = X.mat[i][j];
+                    }
+                }
+            }
+            return minT;
+        }
+
+    template<typename T>
+        T sum(Mat<T>& X)
+        {
+            T s = 0;
+            for (int i = 0; i < X.rows; i++) {
+                for (int j = 0; j < X.cols; j++) {
+                    s += X.mat[i][j];
+                }
+            }
+            return s;
+        }
+
+    template<typename T>
+        T mean(Mat<T>& X)
+        {
+            T s = 0;
+            T n = 0;
+            for (int i = 0; i < X.rows; i++) {
+                for (int j = 0; j < X.cols; j++) {
+                    s += X.mat[i][j];
+                    n++;
+                }
+            }
+            s = s / n;
+            return s;
+        }
 
     template<typename T>
         T Mat<T>::dotProduct(std::vector<T>& x1, std::vector<T>& x2)
@@ -611,6 +673,17 @@ namespace ML {
                 }
             }
             return *this;
+        }
+    template<typename T>
+        Mat<T> mappingTo(Mat<T>& X, double (*func)(double x))
+        {
+            Mat<T> Y(X.rows, X.cols);
+            for (int i = 0; i < X.rows; i++) {
+                for (int j = 0; j < X.cols; j++) {
+                    Y.mat[i][j] = func(X.mat[i][j]);
+                }
+            }
+            return Y;
         }
 }
 #endif // MATRIX_H

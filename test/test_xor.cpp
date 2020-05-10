@@ -31,6 +31,7 @@ void test_bpnn(vector<vector<double> >& x)
 
 void test_logistics(vector<vector<double> >& x)
 {
+    /* not xor  */
     cout<<"logistics:"<<endl;
     Logistics l;
     l.create(2, 0.5);
