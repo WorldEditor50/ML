@@ -1,6 +1,6 @@
 #include "dqn.h"
 namespace ML {
-    void DQNet::createNet(int stateDim, int hiddenDim, int hiddenLayerNum, int actionDim,
+    void DQNet::CreateNet(int stateDim, int hiddenDim, int hiddenLayerNum, int actionDim,
             int maxMemorySize, int replaceTargetIter, int batchSize)
     {
         if (stateDim < 1 || hiddenDim < 1 || hiddenLayerNum < 1 || actionDim < 1 ||
@@ -14,13 +14,13 @@ namespace ML {
         this->maxMemorySize = maxMemorySize;
         this->replaceTargetIter = replaceTargetIter;
         this->batchSize = batchSize;
-        this->QMainNet.createNet(stateDim, hiddenDim, hiddenLayerNum, actionDim, ACTIVATE_SIGMOID);
-        this->QTargetNet.createNet(stateDim, hiddenDim, hiddenLayerNum, actionDim, ACTIVATE_SIGMOID);
-        this->QMainNet.copyTo(QTargetNet);
+        this->QMainNet.CreateNet(stateDim, hiddenDim, hiddenLayerNum, actionDim, ACTIVATE_SIGMOID, true);
+        this->QTargetNet.CreateNet(stateDim, hiddenDim, hiddenLayerNum, actionDim, ACTIVATE_SIGMOID, false);
+        this->QMainNet.CopyTo(QTargetNet);
         return;
     }
 
-    void DQNet::perceive(std::vector<double>& state,
+    void DQNet::Perceive(std::vector<double>& state,
             double action,
             std::vector<double>& nextState,
             double reward,
@@ -39,7 +39,7 @@ namespace ML {
         return;
     }
 
-    void DQNet::forget()
+    void DQNet::Forget()
     {
         int k = memories.size() / 3;
         for (int i = 0; i < k; i++) {
@@ -58,21 +58,17 @@ namespace ML {
         if (p < exploringRate) {
             index = rand() % actionDim;
         } else {
-            index = action(state);
+            index = QMainNet.FeedForward(state);
         }
         return index;
     }
 
-    int DQNet::action(std::vector<double> &state)
+    int DQNet::Action(std::vector<double> &state)
     {
-        int index = 0;
-        QMainNet.feedForward(state);
-        std::vector<double>& action = QMainNet.getOutput();
-        index = maxQ(action);
-        return index;
+        return QMainNet.FeedForward(state);
     }
 
-    int DQNet::maxQ(std::vector<double>& q_value)
+    int DQNet::MaxQ(std::vector<double>& q_value)
     {
         int index = 0;
         double maxValue = q_value[0];
@@ -85,32 +81,32 @@ namespace ML {
         return index;
     }
 
-    void DQNet::experienceReplay(Transition& x)
+    void DQNet::ExperienceReplay(Transition& x)
     {
         std::vector<double> qTarget(actionDim);
-        std::vector<double>& QTargetNetOutput = QTargetNet.getOutput();
-        std::vector<double>& QMainNetOutput = QMainNet.getOutput();
+        std::vector<double>& QTargetNetOutput = QTargetNet.GetOutput();
+        std::vector<double>& QMainNetOutput = QMainNet.GetOutput();
         /* estimate q-target: Q-Regression */
         /* select action to estimate q-value */
         int i = int(x.action);
-        QMainNet.feedForward(x.state);
+        QMainNet.FeedForward(x.state);
         qTarget = QMainNetOutput;
         if (x.done == true) {
             qTarget[i] = x.reward;
         } else {
             /* select optimal action in the QMainNet */
-            QMainNet.feedForward(x.nextState);
-            int k = maxQ(QMainNetOutput);
+            QMainNet.FeedForward(x.nextState);
+            int k = MaxQ(QMainNetOutput);
             /* select value in the QTargetNet */
-            QTargetNet.feedForward(x.nextState);
+            QTargetNet.FeedForward(x.nextState);
             qTarget[i] = x.reward + gamma * QTargetNetOutput[k];
         }
         /* train QMainNet */
-        QMainNet.calculateGradient(x.state, qTarget);
+        QMainNet.Gradient(x.state, qTarget);
         return;
     }
 
-    void DQNet::learn(int optType, double learningRate)
+    void DQNet::Learn(int optType, double learningRate)
     {
         if (memories.size() < batchSize) {
             return;
@@ -118,18 +114,18 @@ namespace ML {
         if (learningSteps % replaceTargetIter == 0) {
             std::cout<<"update target net"<<std::endl;
             /* update tagetNet */
-            QMainNet.copyTo(QTargetNet);
+            QMainNet.CopyTo(QTargetNet);
             learningSteps = 0;
         }
         /* experience replay */
         for (int i = 0; i < batchSize; i++) {
             int k = rand() % memories.size();
-            experienceReplay(memories[k]);
+            ExperienceReplay(memories[k]);
         }
-        QMainNet.optimize(optType, learningRate);
+        QMainNet.Optimize(optType, learningRate);
         /* reduce memory */
         if (memories.size() > maxMemorySize) {
-            forget();
+            Forget();
         }
         /* update step */
         exploringRate = exploringRate * 0.99999;
@@ -138,36 +134,16 @@ namespace ML {
         return;
     }
 
-    void DQNet::onlineLearning(std::vector<Transition>& x, int optType, double learningRate)
+    void DQNet::Save(const std::string &fileName)
     {
-        if (learningSteps % replaceTargetIter == 0) {
-            std::cout<<"update target net"<<std::endl;
-            /* update tagetNet */
-            QMainNet.copyTo(QTargetNet);
-            learningSteps = 0;
-        }
-        for (int i = 0; i < x.size(); i++) {
-            int k = rand() % x.size();
-            experienceReplay(x[k]);
-        }
-        QMainNet.optimize(optType, learningRate);
-        /* update step */
-        exploringRate = exploringRate * 0.99;
-        exploringRate = exploringRate < 0.1 ? 0.1 : exploringRate;
-        learningSteps++;
+        QMainNet.Save(fileName);
         return;
     }
 
-    void DQNet::save(const std::string &fileName)
+    void DQNet::Load(const std::string &fileName)
     {
-        QMainNet.save(fileName);
-        return;
-    }
-
-    void DQNet::load(const std::string &fileName)
-    {
-        QMainNet.load(fileName);
-        QMainNet.copyTo(QTargetNet);
+        QMainNet.Load(fileName);
+        QMainNet.CopyTo(QTargetNet);
         return;
     }
 }

@@ -11,7 +11,7 @@ typedef void (*pftest)(vector<vector<double> >& x);
 void test_bpnn(vector<vector<double> >& x)
 {
     cout<<"bpnn:"<<endl;
-    BPNet bp(2, 4, 1, 1, ACTIVATE_SIGMOID);
+    BPNet bp(2, 4, 1, 1, ACTIVATE_SIGMOID, true);
     vector<vector<double> > y(4);
     for (int i = 0; i < 4; i++) {
         y[i].resize(1);
@@ -20,10 +20,10 @@ void test_bpnn(vector<vector<double> >& x)
     y[1][0] = 1;
     y[2][0] = 1;
     y[3][0] = 0;
-    bp.train(x, y, OPT_ADAM, 4, 0.01, 10000);
-    vector<double>& yi = bp.getOutput();
+    bp.Train(x, y, OPT_RMSPROP, 4, 0.01, 10000);
+    vector<double>& yi = bp.GetOutput();
     for (int i = 0; i < 4; i++) {
-        bp.feedForward(x[i]);
+        bp.FeedForward(x[i]);
         cout<<x[i][0]<<" "<<x[i][1]<<" "<<yi[0]<<endl;
     }
     return;

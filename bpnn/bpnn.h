@@ -28,20 +28,21 @@ namespace ML {
         public:
             Layer():inputDim(0), layerDim(0){}
             ~Layer(){}
-            Layer(int inputDim, int layerDim, int activateType, int lossTye = LOSS_MSE);
             Layer(const Layer& layer);
-            void createLayer(int inputDim, int layerDim, int activateType, int lossTye = LOSS_MSE);
-            void copyTo(Layer& layer);
-            void feedForward(std::vector<double>& x);
-            void feedForward(std::vector<std::vector<double> >& x);
-            void calculateLoss(std::vector<double>& yo, std::vector<double> yt);
-            void calculateErrors(std::vector<double>& nextE, std::vector<std::vector<double> >& nextW);
-            void calculateGradient(std::vector<double>& x);
-            void calculateSoftmaxGradient(std::vector<double>& x, std::vector<double>& yo, std::vector<double> yt);
+            Layer(int inputDim, int layerDim, int activateType, int trainFlag = 0, int lossTye = LOSS_MSE);
+            void CreateLayer(int inputDim, int layerDim, int activateType, int tarinFlag = 0, int lossTye = LOSS_MSE);
+            void CopyTo(Layer& layer);
+            void FeedForward(std::vector<double>& x);
+            void Activating();
+            void Loss(std::vector<double>& yo, std::vector<double> yt);
+            void Error(std::vector<double>& nextE, std::vector<std::vector<double> >& nextW);
+            void Gradient(std::vector<double>& x);
+            void Gradient(std::vector<double>& x, double threshold);
+            void ClipGradient(double threshold);
+            void SoftmaxGradient(std::vector<double>& x, std::vector<double>& yo, std::vector<double> yt);
             void SGD(double learningRate);
             void RMSProp(double rho, double learningRate);
             void Adam(double alpha1, double alpha2, double learningRate);
-            void call(Layer& preLayer, int method);
             std::vector<std::vector<double> > W;
             std::vector<double> B;
             std::vector<double> O;
@@ -50,8 +51,11 @@ namespace ML {
             int layerDim;
             int lossType;
             int layerType;
+            int trainFlag;
+            std::string name;
+            bool visited;
         private:
-            double activate(double x);
+            double Activate(double x);
             double dActivate(double y);
             void softmax(std::vector<double>& x, std::vector<double>& y);
             double dotProduct(std::vector<double>& x1, std::vector<double>& x2);
@@ -73,33 +77,34 @@ namespace ML {
         public:
             BPNet(){}
             ~BPNet(){}
-            BPNet(int inputDim, int hiddenDim, int hiddenLayerNum, int outputDim,
-                    int activateType = ACTIVATE_SIGMOID, int lossType = LOSS_MSE);
             BPNet(const BPNet& bpNet);
-            void createNet(int inputDim, int hiddenDim, int hiddenLayerNum, int outputDim,
+            BPNet(int inputDim, int hiddenDim, int hiddenLayerNum, int outputDim, int trainFlag = 0,
                     int activateType = ACTIVATE_SIGMOID, int lossType = LOSS_MSE);
-            void copyTo(BPNet& dstNet);
-            void softUpdateTo(BPNet& dstNet, double alpha);
-            std::vector<double>& getOutput();
-            int feedForward(std::vector<double>& x);
-            void backPropagate(std::vector<double>& yo, std::vector<double>& yt);
-            void backPropagate(std::vector<double>& loss);
-            void calculateGradient(std::vector<double> &x, std::vector<double> &yo, std::vector<double> &yt);
-            void calculateGradient(std::vector<double> &x, std::vector<double> &y);
+            void CreateNet(int inputDim, int hiddenDim, int hiddenLayerNum, int outputDim, int trainFlag = 0,
+                    int activateType = ACTIVATE_SIGMOID, int lossType = LOSS_MSE);
+            void CopyTo(BPNet& dstNet);
+            void SoftUpdateTo(BPNet& dstNet, double alpha);
+            std::vector<double>& GetOutput();
+            int FeedForward(std::vector<double>& x);
+            void BackPropagate(std::vector<double>& yo, std::vector<double>& yt);
+            void BackPropagate(std::vector<double>& loss);
+            void Gradient(std::vector<double> &x, std::vector<double> &yo, std::vector<double> &yt);
+            void Gradient(std::vector<double> &x, std::vector<double> &y);
+            void Gradient(std::vector<double> &x, std::vector<double> &y, double threshold);
             void SGD(double learningRate = 0.001);
             void RMSProp(double rho = 0.9, double learningRate = 0.001);
             void Adam(double alpha1 = 0.9, double alpha2 = 0.99, double learningRate = 0.001);
-            void optimize(int optType = OPT_RMSPROP, double learningRate = 0.001);
-            void train(std::vector<std::vector<double> >& x,
+            void Optimize(int optType = OPT_RMSPROP, double learningRate = 0.001);
+            void Train(std::vector<std::vector<double> >& x,
                     std::vector<std::vector<double> >& y,
                     int optType,
                     int batchSize,
                     double learningRate,
                     int iterateNum);
-            int argmax();
-            void show();
-            void load(const std::string& fileName);
-            void save(const std::string& fileName);
+            int Argmax();
+            void Show();
+            void Load(const std::string& fileName);
+            void Save(const std::string& fileName);
             int inputDim;
             int hiddenDim;
             int hiddenLayerNum;
