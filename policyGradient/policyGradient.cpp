@@ -1,7 +1,6 @@
 #include "policyGradient.h"
 namespace ML {
-    void DPGNet::CreateNet(int stateDim, int hiddenDim, int hiddenLayerNum, int actionDim,
-                          double learningRate)
+    void DPGNet::CreateNet(int stateDim, int hiddenDim, int hiddenLayerNum, int actionDim)
     {
         if (stateDim < 1 || hiddenDim < 1 || hiddenLayerNum < 1 || actionDim < 1) {
             return;
@@ -10,7 +9,6 @@ namespace ML {
         this->exploringRate = 1;
         this->stateDim = stateDim;
         this->actionDim = actionDim;
-        this->learningRate = learningRate;
         this->policyNet.CreateNet(stateDim, hiddenDim, hiddenLayerNum, actionDim, ACTIVATE_SIGMOID, true, LOSS_CROSS_ENTROPY);
         return;
     }
@@ -78,7 +76,7 @@ namespace ML {
         return;
     }
 
-    void DPGNet::Reinforce(std::vector<Step>& x)
+    void DPGNet::Reinforce(std::vector<Step>& x, double threshold, double learningRate)
     {
         double r = 0;
         std::vector<double> discountedReward(x.size());
@@ -92,7 +90,7 @@ namespace ML {
             x[i].action[k] *= discountedReward[i];
             policyNet.Gradient(x[i].state, x[i].action);
         }
-        policyNet.RMSProp(0.9, learningRate);
+        policyNet.RMSPropWithClip(0.9, learningRate, threshold);
         exploringRate *= 0.99;
         exploringRate = exploringRate < 0.1 ? 0.1 : exploringRate;
         return;

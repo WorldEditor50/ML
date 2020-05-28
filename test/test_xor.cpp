@@ -11,7 +11,8 @@ typedef void (*pftest)(vector<vector<double> >& x);
 void test_bpnn(vector<vector<double> >& x)
 {
     cout<<"bpnn:"<<endl;
-    BPNet bp(2, 4, 1, 1, ACTIVATE_SIGMOID, true);
+    BPNet bp;
+    bp.CreateNet(2, 4, 1, 1, ACTIVATE_SIGMOID, 1);
     vector<vector<double> > y(4);
     for (int i = 0; i < 4; i++) {
         y[i].resize(1);
@@ -25,23 +26,6 @@ void test_bpnn(vector<vector<double> >& x)
     for (int i = 0; i < 4; i++) {
         bp.FeedForward(x[i]);
         cout<<x[i][0]<<" "<<x[i][1]<<" "<<yi[0]<<endl;
-    }
-    return;
-}
-
-void test_logistics(vector<vector<double> >& x)
-{
-    /* not xor  */
-    cout<<"logistics:"<<endl;
-    Logistics l;
-    l.create(2, 0.5);
-    l.loadDataSet("./data/and", 4, 2);
-    l.train(10000);
-    l.show();
-    /* classify */
-    for (int i = 0; i < 4; i++) {
-        double y = l.calculateOutput(x[i]);
-        cout<<x[i][0]<<" "<<x[i][1]<<" "<<y<<endl;
     }
     return;
 }
@@ -80,9 +64,8 @@ void test_svm(vector<vector<double> >& x)
 
 int main()
 {
-    pftest test[4] = {
+    pftest test[3] = {
         test_bpnn,
-        test_logistics,
         test_perceptron,
         test_svm
     };

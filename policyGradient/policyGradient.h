@@ -19,14 +19,13 @@ namespace ML {
         public:
             DPGNet(){}
             ~DPGNet(){}
-            void CreateNet(int stateDim, int hiddenDim, int hiddenLayerNum, int actionDim,
-                           double learningRate = 0.001);
+            void CreateNet(int stateDim, int hiddenDim, int hiddenLayerNum, int actionDim);
             int eGreedyAction(std::vector<double>& state);
             int RandomAction();
             int Action(std::vector<double>& state);
             int MaxAction(std::vector<double>& value);
             void StdScore(std::vector<double>& x);
-            void Reinforce(std::vector<Step>& steps);
+            void Reinforce(std::vector<Step>& x, double threshold = 10.0, double learningRate = 0.001);
             void Save(const std::string& fileName);
             void Load(const std::string& fileName);
             int stateDim;
