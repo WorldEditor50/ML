@@ -1,4 +1,4 @@
-# My MachineLearning
+# ML
 
 ## algorithm
 - bayes
