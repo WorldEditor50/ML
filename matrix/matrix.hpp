@@ -1,5 +1,5 @@
-#ifndef MATRIX_H
-#define MATRIX_H
+#ifndef MATRIx_H
+#define MATRIx_H
 #include <iostream>
 #include <string>
 #include <fstream>
@@ -9,681 +9,498 @@
 #include <cstdlib>
 #include <memory>
 namespace ML {
-    template<typename T>
-        class Mat {
-            public:
-                Mat():rows(0), cols(0){}
-                ~Mat(){}
-                /* create */
-                Mat(int rows, int cols);
-                Mat(const Mat<T>& X);
-                void createMat(int rows, int cols);
-                /* init */
-                void zero();
-                void full(T x);
-                void identity();
-                void random(int n);
-                void uniformRandom();
-                void copy(const Mat<T>& X);
-                void copy(std::vector<T>& x);
-                /* get element */
-                T at(int row, int col);
-                std::vector<T> column(int col);
-                std::vector<T> convertToVector();
-                /* basic operation */
-                Mat<T> operator = (const Mat<T>& X);
-                Mat<T> operator + (const Mat<T>& X);
-                Mat<T> operator - (const Mat<T>& X);
-                Mat<T> operator * (const Mat<T>& X);
-                Mat<T> operator / (const Mat<T>& X);
-                Mat<T> operator % (const Mat<T>& X);
-                Mat<T>& operator += (const Mat<T>& X);
-                Mat<T>& operator -= (const Mat<T>& X);
-                Mat<T>& operator /= (const Mat<T>& X);
-                Mat<T>& operator %= (const Mat<T>& X);
-                Mat<T> operator + (T x);
-                Mat<T> operator - (T x);
-                Mat<T> operator * (T x);
-                Mat<T> operator / (T x);
-                Mat<T>& operator += (T x);
-                Mat<T>& operator -= (T x);
-                Mat<T>& operator *= (T x);
-                Mat<T>& operator /= (T x);
-                /* statistics */
-                T max(std::vector<T>& x);
-                T min(std::vector<T>& x);
-                void cov();
-                T dotProduct(std::vector<T>& x1, std::vector<T>& x2);
-                Mat<T>& mappingTo(double (*func)(double x));
-                /* tranformation */
-                Mat<T> Tr();
-                Mat<T> inverse();
-                Mat<T> diagonalize();
-                Mat<T> othogonalize();
-                /* show */
-                void show();
-                /* read and write */
-                void save(const std::string& fileName);
-                void load(const std::string& fileName);
-                int rows;
-                int cols;
-                std::vector<std::vector<T> > mat;
-        };
 
-    template<typename T>
-        Mat<T>::Mat(int rows, int cols)
-        {
-            createMat(rows, cols);
+enum MatType{
+    NONE = 0,
+    ZERO,
+    IDENTITY,
+    UNIFORM_RAND
+};
+template<typename T>
+class Mat
+{
+public:
+    int rows;
+    int cols;
+    std::vector<std::vector<T> > data;
+public:
+	Mat():rows(0), cols(0){}
+    ~Mat(){}
+    inline bool isSizeEqual(const Mat<T>& x) {return (rows == x.rows && cols == x.cols);}
+    inline bool isNull(){return rows == 0 || cols == 0;}
+    inline bool isSquare(){return rows == cols;}
+    inline T& at(int row, int col){return data[row][col];}
+    std::vector<T>& operator[](int i){return data[i];}
+    Mat<T>& create(int rows, int cols)
+    {
+        this->rows = rows;
+        this->cols = cols;
+        this->data = std::vector<std::vector<T> >(rows);
+        for (int i = 0; i < rows; i++) {
+            data[i] = std::vector<T>(cols, 0);
         }
+        return *this;
+    }
 
-    template<typename T>
-        Mat<T>::Mat(const Mat<T>& X)
-        {
-            if (this == &X) {
-                return;
-            }
-            createMat(X.rows, X.cols);
-            copy(X);
+    void assign(const Mat<T>& x)
+    {
+        for (int i = 0; i < rows; i++) {
+            data[i] = x.data[i];
         }
+        return;
+    }
 
-    template<typename T>
-        void Mat<T>::createMat(int rows, int cols)
-        {
-            this->rows = rows;
-            this->cols = cols;
-            this->mat = std::vector<std::vector<T> >(this->rows);
-            for (int i = 0; i < rows; i++) {
-                mat[i] = std::vector<T>(this->cols, 0);
+    void assign(T x)
+    {
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                data[i][j] = x;
             }
+        }
+        return;
+    }
+   void identity()
+    {
+        if (!isSquare()) {
             return;
         }
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                if (i == j) {
+                    data[i][j] = 1;
+                } else {
+                    data[i][j] = 0;
+                }
+            }
+        }
+        return;
+    }
 
-    /* init */
-    template<typename T>
-        void Mat<T>::zero()
-        {
-            full(0);
+    void random(int n)
+    {
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                data[i][j] = T(rand() % n);
+            }
+        }
+        return;
+    }
+
+    void uniformRandom()
+    {
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                data[i][j] = T(rand() % 10000 - rand() % 10000) / 10000;
+            }
+        }
+        return;
+    }
+
+    Mat(int rows, int cols, MatType type = ZERO)
+    {
+        create(rows, cols);
+        switch (type) {
+        case ZERO:
+            assign(0);
+            break;
+        case IDENTITY:
+            identity();
+            break;
+        case UNIFORM_RAND:
+            uniformRandom();
+            break;
+        default:
+            break;
+        }
+
+    }
+
+    Mat(const Mat<T>& x)
+    {
+        if (this == &x) {
             return;
         }
+        create(x.rows, x.cols);
+        assign(x);
+    }
 
-    template<typename T>
-        void Mat<T>::full(T x)
-        {
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++) {
-                    mat[i][j] = x;
-                }
-            }
-            return;
-        }
-
-    template<typename T>
-        void Mat<T>::identity()
-        {
-            if (rows != cols) {
-                return;
-            }
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++) {
-                    if (i == j) {
-                        mat[i][j] = 1;
-                    } else {
-                        mat[i][j] = 0;
-                    }
-                }
-            }
-            return;
-        }
-
-    template<typename T>
-        void Mat<T>::random(int n)
-        {
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++) {
-                    mat[i][j] = T(rand() % n);
-                }
-            }
-            return;
-        }
-
-    template<typename T>
-        void Mat<T>::uniformRandom()
-        {
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++) {
-                    mat[i][j] = T(rand() % 10000 - rand() % 10000) / 10000;
-                }
-            }
-            return;
-        }
-
-    template<typename T>
-        void Mat<T>::copy(const Mat<T>& X)
-        {
-            if (X.rows != rows || X.cols != cols) {
-                return;
-            }
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++) {
-                    mat[i][j] = X.mat[i][j];
-                }
-            }
-            return;
-        }
-
-    template<typename T>
-        void Mat<T>::copy(std::vector<T>& x)
-        {
-            if (x.size() < rows * cols) {
-                return;
-            }
-            int k = 0;
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++) {
-                    mat[i][j] = x[k];
-                    k++;
-                }
-            }
-            return;
-        }
-
-    /* get element */
-    template<typename T>
-        T Mat<T>::at(int row, int col)
-        {
-            if (row >= rows || col >= cols || row < 0 || cols < 0) {
-                return -10000;
-            }
-            return mat[row][col];
-        }
-
-    template<typename T>
-        std::vector<T> Mat<T>::column(int col)
-        {
-            std::vector<T> columnT;
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++) {
-                    if (j == col) {
-                        columnT.push_back(mat[i][j]);
-                    }
-                }
-            }
-            return columnT;
-        }
-
-    template<typename T>
-        std::vector<T> Mat<T>::convertToVector()
-        {
-            std::vector<T> x;
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++) {
-                    x.push_back(mat[i][j]);
-                }
-            }
-            return x;
-        }
-
-    /* show */
-    template<typename T>
-        void Mat<T>::show()
-        {
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++) {
-                    std::cout<<mat[i][j]<<" ";
-                }
-                std::cout<<std::endl;
-            }
-            return;
-        }
-
-    /* read and write */
-    template<typename T>
-        void Mat<T>::save(const std::string& fileName)
-        {
-            std::ofstream file;
-            file.open(fileName, std::ofstream::app);
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++) {
-                    file << mat[i][j]<<" ";
-                }
-                file << std::endl;
-            }
-            return;
-        }
-
-    template<typename T>
-        void Mat<T>::load(const std::string& fileName)
-        {
-            std::ifstream file;
-            file.open(fileName);
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++) {
-                    file >> mat[i][j];
-                }
-            }
-            return;
-        }
-
-    /* basic operation */
-    template<typename T>
-        Mat<T> Mat<T>::operator = (const Mat<T>& X)
-        {
-            /* make sure the copy constructor is completed */
-            if (this == &X) {
-                return *this;
-            }
-            if (rows == 0 || cols == 0) {
-                this->createMat(X.rows, X.cols);
-            }
-            if (X.rows != rows || X.cols != cols) {
-                std::cout<<"mat = size not equal"<<std::endl;
-                return *this;
-            }
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++) {
-                    mat[i][j] = X.mat[i][j];
-                }
-            }
+    Mat<T> operator = (const Mat<T>& x)
+    {
+        if (this == &x) {
             return *this;
         }
-
-    template<typename T>
-        Mat<T> Mat<T>::operator + (const Mat<T>& X)
-        {
-            if ((rows != X.rows) || (cols != X.cols)) {
-                std::cout<<"mat + size not equal"<<std::endl;
-                return *this;
-            }
-            Mat<T> Y(rows, cols);
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++) {
-                    Y.mat[i][j] = mat[i][j] + X.mat[i][j];
-                }
-            }
-            return Y;
+        if (isNull()) {
+            create(x.rows, x.cols);
         }
-
-    template<typename T>
-        Mat<T> Mat<T>::operator - (const Mat<T>& X)
-        {
-            if (rows != X.rows || (cols != X.cols)) {
-                std::cout<<"mat - size not equal"<<std::endl;
-                return *this;
-            }
-            Mat<T> Y(rows, cols);
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++) {
-                    Y.mat[i][j] = mat[i][j] - X.mat[i][j];
-                }
-            }
-            return Y;
-        }
-
-    template<typename T>
-        Mat<T> Mat<T>::operator * (const Mat<T>& X)
-        {
-            if (cols != X.rows) {
-                std::cout<<"mat * size not equal"<<std::endl;
-                return *this;
-            }
-            /* (m, p) x (p, n) = (m, n) */
-            int m = rows;
-            int p = cols;
-            int n = X.cols;
-            Mat<T> Y(m, n);
-            for (int i = 0; i < m; i++) {
-                for (int j = 0; j < n; j++) {
-                    for (int k = 0; k < p; k++) {
-                        Y.mat[i][j] += mat[i][k] * X.mat[k][j];
-                    }
-                }
-            }
-            return Y;
-        }
-
-    template<typename T>
-        Mat<T> Mat<T>::operator / (const Mat<T>& X)
-        {
-            if (rows != X.rows || (cols != X.cols)) {
-                std::cout<<"mat / size not equal"<<std::endl;
-                return *this;
-            }
-            Mat<T> Y(rows, cols);
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++) {
-                    if (X.mat[i][j] == 0) {
-                        std::cout<<"mat / zero element"<<std::endl;
-                        return *this;
-                    } else {
-                        Y.mat[i][j] = mat[i][j] / X.mat[i][j];
-                    }
-                }
-            }
-            return Y;
-        }
-
-    template<typename T>
-        Mat<T> Mat<T>::operator % (const Mat<T>& X)
-        {
-            if (rows != X.rows || (cols != X.cols)) {
-                std::cout<<"mat % size not equal"<<std::endl;
-                Mat<T> nullMat;
-                return nullMat;
-            }
-            Mat<T> Y(rows, cols);
-            for (int i = 0; i < Y.rows; i++) {
-                for (int j = 0; j < Y.cols; j++) {
-                    Y.mat[i][j] = mat[i][j] * X.mat[i][j];
-                }
-            }
-            return Y;
-        }
-
-    template<typename T>
-        Mat<T>& Mat<T>::operator += (const Mat<T>& X)
-        {
-            if (rows != X.rows || (cols != X.cols)) {
-                std::cout<<"mat += size not equal"<<std::endl;
-                return *this;
-            }
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++) {
-                    mat[i][j] += X.mat[i][j];
-                }
-            }
+        if (!isSizeEqual(x)) {
+            std::cout<<"= size not equal"<<std::endl;
             return *this;
         }
+        assign(x);
+        return *this;
+    }
 
-    template<typename T>
-        Mat<T>& Mat<T>::operator -= (const Mat<T>& X)
-        {
-            if (rows != X.rows || (cols != X.cols)) {
-                std::cout<<"mat -= size not equal"<<std::endl;
-                return *this;
-            }
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++) {
-                    mat[i][j] -= X.mat[i][j];
+    void zero(){ assign(0);}
+
+    std::vector<T> column(int col)
+    {
+        std::vector<T> columnT;
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                if (j == col) {
+                    columnT.push_back(data[i][j]);
                 }
             }
+        }
+        return columnT;
+    }
+
+    std::vector<T> toVector()
+    {
+        std::vector<T> x;
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                x.push_back(data[i][j]);
+            }
+        }
+        return x;
+    }
+
+    void show()
+    {
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                std::cout<<data[i][j]<<" ";
+            }
+            std::cout<<std::endl;
+        }
+        return;
+    }
+
+    Mat<T> operator + (const Mat<T>& x)
+    {
+        if (!isSizeEqual(x)) {
+            std::cout<<"+ size not equal"<<std::endl;
             return *this;
         }
+        Mat<T> y(rows, cols);
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                y.data[i][j] = data[i][j] + x.data[i][j];
+            }
+        }
+        return y;
+    }
 
-    template<typename T>
-        Mat<T>& Mat<T>::operator /= (const Mat<T>& X)
-        {
-            if (rows != X.rows || (cols != X.cols)) {
-                std::cout<<"mat /= size not equal"<<std::endl;
-                return *this;
-            }
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++) {
-                    if (X.mat[i][j] == 0) {
-                        return *this;
-                    } else {
-                        mat[i][j] /= X.mat[i][j];
-                    }
-                }
-            }
+    Mat<T> operator - (const Mat<T>& x)
+    {
+        if (!isSizeEqual(x)) {
+            std::cout<<"- size not equal"<<std::endl;
             return *this;
         }
+        Mat<T> y(rows, cols);
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                y.data[i][j] = data[i][j] - x.data[i][j];
+            }
+        }
+        return y;
+    }
 
-    template<typename T>
-        Mat<T>& Mat<T>::operator %= (const Mat<T>& X)
-        {
-            if (rows != X.rows || (cols != X.cols)) {
-                std::cout<<"mat %= size not equal"<<std::endl;
-                return *this;
-            }
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++) {
-                    mat[i][j] *= X.mat[i][j];
-                }
-            }
+    Mat<T> operator * (const Mat<T>& x)
+    {
+        if (cols != x.rows) {
+            std::cout<<"* size not equal"<<std::endl;
             return *this;
         }
-
-    template<typename T>
-        Mat<T> Mat<T>::operator + (T x)
-        {
-            Mat<T> Y(rows, cols);
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++) {
-                    Y.mat[i][j] = mat[i][j] + x;
+        /* (m, p) x (p, n) = (m, n) */
+        int m = rows;
+        int p = cols;
+        int n = x.cols;
+        Mat<T> y(m, n);
+        for (int i = 0; i < m; i++) {
+            for (int j = 0; j < n; j++) {
+                for (int k = 0; k < p; k++) {
+                    y.data[i][j] += data[i][k] * x.data[k][j];
                 }
             }
-            return Y;
         }
+        return y;
+    }
 
-    template<typename T>
-        Mat<T> Mat<T>::operator - (T x)
-        {
-            Mat<T> Y(rows, cols);
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++) {
-                    Y.mat[i][j] = mat[i][j] - x;
-                }
-            }
-            return Y;
-        }
-
-    template<typename T>
-        Mat<T> Mat<T>::operator * (T x)
-        {
-            Mat<T> Y(rows, cols);
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++) {
-                    Y.mat[i][j] = mat[i][j] * x;
-                }
-            }
-            return Y;
-        }
-
-    template<typename T>
-        Mat<T> Mat<T>::operator / (T x)
-        {
-            if (x == 0) {
-                return *this;
-            }
-            Mat<T> Y(rows, cols);
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++) {
-                    Y.mat[i][j] = mat[i][j] / x;
-                }
-            }
-            return Y;
-        }
-
-    template<typename T>
-        Mat<T>& Mat<T>::operator += (T x)
-        {
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++) {
-                    mat[i][j] += x;
-                }
-            }
+    Mat<T> operator / (const Mat<T>& x)
+    {
+        if (!isSizeEqual(x)) {
+            std::cout<<"/ size not equal"<<std::endl;
             return *this;
         }
-
-    template<typename T>
-        Mat<T>& Mat<T>::operator -= (T x)
-        {
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++) {
-                    mat[i][j] -= x;
-                }
+        Mat<T> y(rows, cols);
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                 y.data[i][j] = data[i][j] / x.data[i][j];
             }
+        }
+        return y;
+    }
+
+    Mat<T> operator % (const Mat<T>& x)
+    {
+        if (!isSizeEqual(x)) {
+            std::cout<<"% size not equal"<<std::endl;
             return *this;
         }
-
-    template<typename T>
-        Mat<T>& Mat<T>::operator *= (T x)
-        {
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++) {
-                    mat[i][j] *= x;
-                }
+        Mat<T> y(rows, cols);
+        for (int i = 0; i < y.rows; i++) {
+            for (int j = 0; j < y.cols; j++) {
+                y.data[i][j] = data[i][j] * x.data[i][j];
             }
+        }
+        return y;
+    }
+
+    Mat<T>& operator += (const Mat<T>& x)
+    {
+        if (!isSizeEqual(x)) {
+            std::cout<<"+= size not equal"<<std::endl;
             return *this;
         }
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                data[i][j] += x.data[i][j];
+            }
+        }
+        return *this;
+    }
 
-    template<typename T>
-        Mat<T>& Mat<T>::operator /= (T x)
-        {
-            if (x == 0) {
-                return *this;
-            }
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++) {
-                    mat[i][j] /= x;
-                }
-            }
+    Mat<T>& operator -= (const Mat<T>& x)
+    {
+        if (!isSizeEqual(x)) {
+            std::cout<<"-= size not equal"<<std::endl;
             return *this;
         }
-
-    template<typename T>
-        T Mat<T>::max(std::vector<T>& x)
-        {
-            T maxT = x[0];
-            for (int i = 0; i < x.size(); i++) {
-                if (maxT < x[i]) {
-                    maxT = x[i];
-                }
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                data[i][j] -= x.data[i][j];
             }
-            return maxT;
         }
+        return *this;
+    }
 
-    template<typename T>
-        T Mat<T>::min(std::vector<T>& x)
-        {
-            T minT = x[0];
-            for (int i = 0; i < x.size(); i++) {
-                if (minT > x[i]) {
-                    minT = x[i];
-                }
-            }
-            return minT;
-        }
-    template<typename T>
-        T max(Mat<T>& X)
-        {
-            T maxT = X.mat[0][0];
-            for (int i = 0; i < X.rows; i++) {
-                for (int j = 0; j < X.cols; j++) {
-                    if (maxT < X.mat[i][j]) {
-                        maxT = X.mat[i][j];
-                    }
-                }
-            }
-            return maxT;
-        }
-
-    template<typename T>
-        T min(Mat<T>& X)
-        {
-            T minT = X.mat[0][0];
-            for (int i = 0; i < X.rows; i++) {
-                for (int j = 0; j < X.cols; j++) {
-                    if (minT > X.mat[i][j]) {
-                        minT = X.mat[i][j];
-                    }
-                }
-            }
-            return minT;
-        }
-
-    template<typename T>
-        T sum(Mat<T>& X)
-        {
-            T s = 0;
-            for (int i = 0; i < X.rows; i++) {
-                for (int j = 0; j < X.cols; j++) {
-                    s += X.mat[i][j];
-                }
-            }
-            return s;
-        }
-
-    template<typename T>
-        T mean(Mat<T>& X)
-        {
-            T s = 0;
-            T n = 0;
-            for (int i = 0; i < X.rows; i++) {
-                for (int j = 0; j < X.cols; j++) {
-                    s += X.mat[i][j];
-                    n++;
-                }
-            }
-            s = s / n;
-            return s;
-        }
-
-    template<typename T>
-        T Mat<T>::dotProduct(std::vector<T>& x1, std::vector<T>& x2)
-        {
-            T s = 0;
-            for (int i = 0; i < x1.size(); i++) {
-                s += x1[i] * x2[i];
-            }
-            return s;
-        }
-
-    /* tranformat<T>ion */
-    template<typename T>
-        Mat<T> Mat<T>::Tr()
-        {
-            Mat<T> Y;
-            Y.createMat(cols,rows);
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++) {
-                    Y.mat[j][i] = mat[i][j];
-                }
-            }
-            return Y;
-        }
-
-    template<typename T>
-        Mat<T> Mat<T>::inverse()
-        {
-            Mat<T> M;
-            return M;
-        }
-
-    template<typename T>
-        Mat<T> Mat<T>::diagonalize()
-        {
-            Mat<T> M;
-            return M;
-        }
-
-    template<typename T>
-        Mat<T> Mat<T>::othogonalize()
-        {
-            Mat<T> M;
-            return M;
-        }
-
-    template<typename T>
-        Mat<T>& Mat<T>::mappingTo(double (*func)(double x))
-        {
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++) {
-                    mat[i][j] = func(mat[i][j]);
-                }
-            }
+    Mat<T>& operator /= (const Mat<T>& x)
+    {
+        if (!isSizeEqual(x)) {
+            std::cout<<"/= size not equal"<<std::endl;
             return *this;
         }
-    template<typename T>
-        Mat<T> mappingTo(Mat<T>& X, double (*func)(double x))
-        {
-            Mat<T> Y(X.rows, X.cols);
-            for (int i = 0; i < X.rows; i++) {
-                for (int j = 0; j < X.cols; j++) {
-                    Y.mat[i][j] = func(X.mat[i][j]);
-                }
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                data[i][j] /= x.data[i][j];
             }
-            return Y;
         }
+        return *this;
+    }
+
+    Mat<T>& operator %= (const Mat<T>& x)
+    {
+        if (!isSizeEqual(x)) {
+            std::cout<<"%= size not equal"<<std::endl;
+            return *this;
+        }
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                data[i][j] *= x.data[i][j];
+            }
+        }
+        return *this;
+    }
+
+    Mat<T> operator + (T x)
+    {
+        Mat<T> y(rows, cols);
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                y.data[i][j] = data[i][j] + x;
+            }
+        }
+        return y;
+    }
+
+    Mat<T> operator - (T x)
+    {
+        Mat<T> y(rows, cols);
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                y.data[i][j] = data[i][j] - x;
+            }
+        }
+        return y;
+    }
+
+    Mat<T> operator * (T x)
+    {
+        Mat<T> y(rows, cols);
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                y.data[i][j] = data[i][j] * x;
+            }
+        }
+        return y;
+    }
+
+    Mat<T> operator / (T x)
+    {
+        Mat<T> y(rows, cols);
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                y.data[i][j] = data[i][j] / x;
+            }
+        }
+        return y;
+    }
+
+    Mat<T>& operator += (T x)
+    {
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                data[i][j] += x;
+            }
+        }
+        return *this;
+    }
+
+    Mat<T>& operator -= (T x)
+    {
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                data[i][j] -= x;
+            }
+        }
+        return *this;
+    }
+
+    Mat<T>& operator *= (T x)
+    {
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                data[i][j] *= x;
+            }
+        }
+        return *this;
+    }
+
+    Mat<T>& operator /= (T x)
+    {
+        if (x == 0) {
+            return *this;
+        }
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                data[i][j] /= x;
+            }
+        }
+        return *this;
+    }
+
+    T mean(Mat<T>& x)
+    {
+        T s = 0;
+        T n = 0;
+        for (int i = 0; i < x.rows; i++) {
+            for (int j = 0; j < x.cols; j++) {
+                s += x.data[i][j];
+                n++;
+            }
+        }
+        s = s / n;
+        return s;
+    }
+
+    Mat<T> Tr()
+    {
+        Mat<T> y(cols,rows);
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                y.data[j][i] = data[i][j];
+            }
+        }
+        return y;
+    }
+
+    void save(const std::string& fileName)
+    {
+        std::ofstream file;
+        file.open(fileName, std::ofstream::app);
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                file << data[i][j]<<" ";
+            }
+            file << std::endl;
+        }
+        return;
+    }
+
+    void load(const std::string& fileName)
+    {
+        std::ifstream file;
+        file.open(fileName);
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                file >> data[i][j];
+            }
+        }
+        return;
+    }
+};
+template<typename T>
+Mat<T> for_each(const Mat<T>& x, double (*func)(double x))
+{
+    Mat<T> y(x.rows, x.cols);
+    for (int i = 0; i < x.rows; i++) {
+        for (int j = 0; j < x.cols; j++) {
+            y.data[i][j] = func(x.data[i][j]);
+        }
+    }
+    return y;
 }
-#endif // MATRIX_H
+
+template<typename T>
+T sum(Mat<T>& x)
+{
+    T s = 0;
+    for (int i = 0; i < x.rows; i++) {
+        for (int j = 0; j < x.cols; j++) {
+            s += x.data[i][j];
+        }
+    }
+    return s;
+}
+
+template<typename T>
+T max(Mat<T>& x)
+{
+    T maxT = x.data[0][0];
+    for (int i = 0; i < x.rows; i++) {
+        for (int j = 0; j < x.cols; j++) {
+            if (maxT < x.data[i][j]) {
+                maxT = x.data[i][j];
+            }
+        }
+    }
+    return maxT;
+}
+
+template<typename T>
+T min(Mat<T>& x)
+{
+    T minT = x.data[0][0];
+    for (int i = 0; i < x.rows; i++) {
+        for (int j = 0; j < x.cols; j++) {
+            if (minT > x.data[i][j]) {
+                minT = x.data[i][j];
+            }
+        }
+    }
+    return minT;
+}
+}
+#endif // MATRIx_H

@@ -14,8 +14,7 @@ void test_save()
 }
 void test_load()
 {
-    Mat<int> M;
-    M.createMat(3, 4);
+    Mat<int> M(3, 4);
     M.load("./m1");
     M.show();
     return;
@@ -31,11 +30,9 @@ void test_zero()
 }
 void test_copy()
 {
-    Mat<int> M1;
-    M1.createMat(3, 4);
+    Mat<int> M1(3, 4);
     M1.load("./m1");
     Mat<int> M2(M1);
-    M2.copy(M1);
     M2.show();
     cout<<M2.at(0, 0)<<endl;
     vector<int> col = M2.column(3);
